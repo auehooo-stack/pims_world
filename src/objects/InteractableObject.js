@@ -127,6 +127,11 @@ export class InteractableObject {
         const distance = Math.abs(targetX - currentX);
         const duration = Phaser.Math.Clamp(distance * 24, 780, 1600);
 
+        if (this.assistantWalkTextureKey && hasTexture(this.container.scene, this.assistantWalkTextureKey)) {
+            this.image?.setTexture(this.assistantWalkTextureKey);
+        }
+        this.image?.setFlipX(direction < 0);
+
         this.assistantMoveTween = this.container.scene.tweens.add({
             targets: this.container,
             x: targetX,
@@ -135,10 +140,12 @@ export class InteractableObject {
             onUpdate: () => {
                 this.x = this.container.x;
                 this.y = this.container.y;
+                this.image?.setFlipX(direction < 0);
             },
             onComplete: () => {
                 this.assistantMoveTween = null;
                 this.setAssistantTexture(this.textureKey);
+                this.image?.setFlipX(direction < 0);
                 this.queueAssistantIdle(Phaser.Math.Between(700, 1600));
             }
         });

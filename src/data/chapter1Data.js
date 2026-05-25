@@ -14,7 +14,8 @@ export const chapter1Data = {
             y: 458,
             width: 60,
             height: 96,
-            color: 0xff4f86
+            color: 0xff4f86,
+            animated: true
         },
         {
             id: 'cabinet',

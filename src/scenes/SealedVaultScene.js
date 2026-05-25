@@ -39,10 +39,13 @@ export class SealedVaultScene extends Phaser.Scene {
         ));
 
         this.interaction = new InteractionManager(this, this.player, this.interactables, (prompt) => this.bottomHud.setInteractionPrompt(prompt));
-        this.spaceKey.on('down', () => {
-            if (!this.dialogue.isActive) {
-                this.interaction.interact();
+        this.spaceKey.on('down', () => this.tryInteract());
+        this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
+        this.input.keyboard.on('keydown-ENTER', () => {
+            if (this.dialogue.isActive) {
+                return;
             }
+            this.tryInteract();
         });
 
         this.input.on('pointerdown', (pointer) => {
@@ -111,7 +114,8 @@ export class SealedVaultScene extends Phaser.Scene {
 
     handleInteraction(id) {
         if (id === 'assistant') {
-            this.dialogue.say(dialogueData.assistantDefault);
+            console.log('[SealedVaultScene] assistant interact');
+            this.openAssistantDialog();
             return;
         }
 
@@ -176,6 +180,41 @@ export class SealedVaultScene extends Phaser.Scene {
             return;
         }
         this.dialogue.say(dialogueData.carefulResult);
+    }
+
+    openAssistantDialog() {
+        const state = {
+            currentObjective: GameState.getCurrentObjective(),
+            hasGuidelineBook: Boolean(GameState.get('hasCheckedInventory')),
+            hasSecurityPledge: GameState.get('currentNdaCount'),
+            documentCheckCleared: Boolean(GameState.get('miniGameCleared')),
+            inventory: {
+                missingNdaCount: GameState.get('missingNdaCount'),
+                requiredNdaCount: GameState.get('requiredNdaCount'),
+                currentNdaCount: GameState.get('currentNdaCount'),
+                hasFoundMissingNdas: Boolean(GameState.get('hasFoundMissingNdas')),
+                pimsRegistered: Boolean(GameState.get('pimsRegistered'))
+            },
+            isDialogOpen: this.dialogue.isActive,
+            dialogVisible: Boolean(this.dialogue.dialogBox?.container?.visible),
+            currentInteractable: this.interaction?.current?.id || null
+        };
+        console.log('[SealedVaultScene] opening assistant dialog', state);
+
+        this.dialogue.dialogBox?.container?.setVisible(true);
+        this.dialogue.dialogBox?.container?.setDepth(1000);
+        this.time.delayedCall(50, () => {
+            console.log('[SealedVaultScene] assistant dialog showLines');
+            this.dialogue.say([
+                { speaker: 'KCA 간사', text: 'PIMS 단말기에 필수서류를 등록한 후, 금고를 확인하세요.' }
+            ]);
+        });
+    }
+
+    tryInteract() {
+        if (!this.dialogue.isActive) {
+            this.interaction.interact();
+        }
     }
 
     drawBackground() {
