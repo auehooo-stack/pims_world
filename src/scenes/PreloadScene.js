@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { loadAssets } from '../systems/AssetManager.js';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
+const DEV_START_SCENE = 'StartScene';
+
 export class PreloadScene extends Phaser.Scene {
     constructor() {
         super('PreloadScene');
@@ -51,6 +53,6 @@ export class PreloadScene extends Phaser.Scene {
 
     create() {
         this.registry.set('assetFailures', [...(this.failedAssets || [])]);
-        this.scene.start('StartScene');
+        this.scene.start(DEV_START_SCENE);
     }
 }

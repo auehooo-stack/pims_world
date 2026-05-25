@@ -123,6 +123,26 @@ export class SealedVaultScene extends Phaser.Scene {
             GameState.set('missingNdaCount', 2);
             GameState.set('currentNdaCount', 10);
             GameState.set('hasFoundMissingNdas', true);
+            const toastBg = this.add.rectangle(CENTER_X, 420, 420, 48, 0x05050a, 0.88)
+                .setStrokeStyle(1, 0x75f6ff, 0.45)
+                .setDepth(1200);
+            const toastText = this.add.text(CENTER_X, 420, '서류 2장을 찾았습니다.', {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '18px',
+                color: '#f8f3ff',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5).setDepth(1201);
+            this.tweens.add({
+                targets: [toastBg, toastText],
+                alpha: { from: 1, to: 0 },
+                duration: 1900,
+                delay: 700,
+                onComplete: () => {
+                    toastBg.destroy();
+                    toastText.destroy();
+                }
+            });
             this.dialogue.say(dialogueData.cabinetFound);
             return;
         }
