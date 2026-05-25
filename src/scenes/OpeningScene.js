@@ -71,6 +71,11 @@ export class OpeningScene extends Phaser.Scene {
         this.assistantIndex = 0;
         this.transitioning = false;
         this.skipHandler = null;
+        this.assistantKeyHandler = null;
+        this.phaseAdvanceTimer = null;
+        this.assistantAdvanceTimer = null;
+        this.phaseToken = 0;
+        this.assistantToken = 0;
     }
 
     create() {
@@ -82,6 +87,14 @@ export class OpeningScene extends Phaser.Scene {
         this.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.ESC);
         this.skipHandler = () => this.skipToStageOne();
         this.input.keyboard.on('keydown-ESC', this.skipHandler);
+        this.assistantKeyHandler = (event) => {
+            if (this.currentPhase === 'assistant' && !this.transitioning) {
+                if (event.key === 'Enter') {
+                    this.advanceAssistantLine();
+                }
+            }
+        };
+        this.input.keyboard.on('keydown', this.assistantKeyHandler);
         this.input.on('pointerdown', this.handlePointerDown, this);
 
         this.events.once('shutdown', () => this.cleanup());
@@ -96,8 +109,18 @@ export class OpeningScene extends Phaser.Scene {
 
     clearSceneObjects() {
         this.tweens.killAll();
+        this.clearScheduledTimers();
         this.sceneObjects.forEach((object) => object?.destroy?.());
         this.sceneObjects = [];
+    }
+
+    clearScheduledTimers() {
+        this.phaseAdvanceTimer?.remove(false);
+        this.assistantAdvanceTimer?.remove(false);
+        this.phaseAdvanceTimer = null;
+        this.assistantAdvanceTimer = null;
+        this.phaseToken += 1;
+        this.assistantToken += 1;
     }
 
     cleanup() {
@@ -106,6 +129,10 @@ export class OpeningScene extends Phaser.Scene {
         if (this.skipHandler) {
             this.input.keyboard.off('keydown-ESC', this.skipHandler);
             this.skipHandler = null;
+        }
+        if (this.assistantKeyHandler) {
+            this.input.keyboard.off('keydown', this.assistantKeyHandler);
+            this.assistantKeyHandler = null;
         }
         this.input.off('pointerdown', this.handlePointerDown, this);
         this.skipButton?.destroy();
@@ -118,17 +145,22 @@ export class OpeningScene extends Phaser.Scene {
         this.skipButton = this.add.rectangle(GAME_WIDTH - 88, GAME_HEIGHT - 46, 120, 30, 0x24183f, 0.92)
             .setStrokeStyle(2, 0x75f6ff, 0.75)
             .setInteractive({ useHandCursor: true })
-            .setDepth(ASSISTANT_DEPTHS.button);
+            .setDepth(ASSISTANT_DEPTHS.button + 20);
         this.skipButtonText = this.add.text(GAME_WIDTH - 88, GAME_HEIGHT - 46, 'Skip', {
             fontFamily: 'Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff'
-        }).setOrigin(0.5).setDepth(ASSISTANT_DEPTHS.button + 1);
+        }).setOrigin(0.5).setDepth(ASSISTANT_DEPTHS.button + 21);
 
         this.skipButton.on('pointerdown', () => this.skipToStageOne());
         this.skipButton.on('pointerover', () => this.skipButton.setFillStyle(0x322159, 0.98));
         this.skipButton.on('pointerout', () => this.skipButton.setFillStyle(0x24183f, 0.92));
         this.skipButtonText.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.skipToStageOne());
+        this.input.on('gameobjectdown', (pointer, gameObject) => {
+            if (gameObject === this.skipButton || gameObject === this.skipButtonText) {
+                this.skipToStageOne();
+            }
+        });
     }
 
     handlePointerDown(pointer) {
@@ -185,18 +217,7 @@ export class OpeningScene extends Phaser.Scene {
             color: '#c9ffef'
         }).setOrigin(0.5));
 
-        const loadingText = this.track(this.add.text(CENTER_X, 574, 'Click or Tap to Continue', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#ffd36e'
-        }).setOrigin(0.5));
-        this.tweens.add({
-            targets: loadingText,
-            alpha: { from: 0.35, to: 1 },
-            yoyo: true,
-            repeat: -1,
-            duration: 560
-        });
+        this.schedulePhaseAdvance('warning', 1700);
     }
 
     showWarningSequence() {
@@ -245,18 +266,7 @@ export class OpeningScene extends Phaser.Scene {
             repeat: 5
         });
 
-        const prompt = this.track(this.add.text(CENTER_X, 574, 'Click or Tap to Continue', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#c9ffef'
-        }).setOrigin(0.5));
-        this.tweens.add({
-            targets: prompt,
-            alpha: { from: 0.3, to: 1 },
-            yoyo: true,
-            repeat: -1,
-            duration: 520
-        });
+        this.schedulePhaseAdvance('glitch', 1700);
     }
 
     showGlitchSequence() {
@@ -305,18 +315,7 @@ export class OpeningScene extends Phaser.Scene {
             this.spawnGlitchFragment(90 + i * 140);
         }
 
-        const prompt = this.track(this.add.text(CENTER_X, 574, 'Click or Tap to Continue', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#c9ffef'
-        }).setOrigin(0.5));
-        this.tweens.add({
-            targets: prompt,
-            alpha: { from: 0.3, to: 1 },
-            yoyo: true,
-            repeat: -1,
-            duration: 520
-        });
+        this.schedulePhaseAdvance('world', 2300);
     }
 
     spawnGlitchFragment(offset) {
@@ -392,18 +391,7 @@ export class OpeningScene extends Phaser.Scene {
             color: '#75f6ff'
         }).setOrigin(0.5));
 
-        const prompt = this.track(this.add.text(CENTER_X, 578, 'Click or Tap to Continue', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '22px',
-            color: '#f8f3ff'
-        }).setOrigin(0.5));
-        this.tweens.add({
-            targets: prompt,
-            alpha: { from: 0.35, to: 1 },
-            yoyo: true,
-            repeat: -1,
-            duration: 540
-        });
+        this.schedulePhaseAdvance('assistant', 2200);
     }
 
     showAssistantIntro() {
@@ -533,8 +521,8 @@ export class OpeningScene extends Phaser.Scene {
         this.assistantLineText.setText(line);
         this.assistantPromptText.setText(
             this.assistantIndex === ASSISTANT_LINES.length - 1
-                ? 'Click or Tap: 1단계 시작'
-                : 'Click or Tap: 다음 대사'
+                ? 'Click or Enter: 1단계 시작'
+                : 'Click or Enter: 다음 대사'
         );
     }
 
@@ -590,8 +578,33 @@ export class OpeningScene extends Phaser.Scene {
         }
 
         this.transitioning = true;
+        this.clearScheduledTimers();
         GameState.setTimeRunning(true);
         this.clearSceneObjects();
         this.scene.start('SealedVaultScene');
+    }
+
+    schedulePhaseAdvance(nextPhase, delay) {
+        this.phaseToken += 1;
+        const token = this.phaseToken;
+        this.phaseAdvanceTimer?.remove(false);
+        this.phaseAdvanceTimer = this.time.delayedCall(delay, () => {
+            if (this.transitioning || token !== this.phaseToken) {
+                return;
+            }
+            if (nextPhase === 'warning') {
+                this.showWarningSequence();
+            } else if (nextPhase === 'glitch') {
+                this.showGlitchSequence();
+            } else if (nextPhase === 'world') {
+                this.showWorldTitleSequence();
+            } else if (nextPhase === 'assistant') {
+                this.showAssistantIntro();
+            }
+        });
+    }
+
+    scheduleAssistantAdvance(delay) {
+        // no-op: assistant lines now advance only by click or Enter.
     }
 }
