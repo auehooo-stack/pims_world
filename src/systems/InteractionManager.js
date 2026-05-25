@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser';
 
 export class InteractionManager {
-    constructor(scene, player, interactables, promptText) {
+    constructor(scene, player, interactables, promptTarget) {
         this.scene = scene;
         this.player = player;
         this.interactables = interactables;
-        this.promptText = promptText;
+        this.promptTarget = promptTarget;
         this.current = null;
         this.range = 58;
     }
@@ -13,7 +13,8 @@ export class InteractionManager {
     update(blocked) {
         if (blocked) {
             this.current = null;
-            this.promptText.setText('');
+            this.interactables.forEach((item) => item.setInteractionFocus?.(false));
+            this.setPrompt('');
             return;
         }
 
@@ -28,12 +29,21 @@ export class InteractionManager {
         });
 
         this.current = closest;
-        this.promptText.setText(closest ? closest.prompt : '');
+        this.interactables.forEach((item) => item.setInteractionFocus?.(item === closest));
+        this.setPrompt(closest ? closest.prompt : '');
     }
 
     interact() {
         if (this.current?.onInteract) {
             this.current.onInteract(this.current);
         }
+    }
+
+    setPrompt(prompt) {
+        if (typeof this.promptTarget === 'function') {
+            this.promptTarget(prompt);
+            return;
+        }
+        this.promptTarget?.setText(prompt);
     }
 }

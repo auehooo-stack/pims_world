@@ -1,18 +1,21 @@
 import * as Phaser from 'phaser';
+import { PreloadScene } from './scenes/PreloadScene.js';
 import { StartScene } from './scenes/StartScene.js';
+import { OpeningScene } from './scenes/OpeningScene.js';
 import { SealedVaultScene } from './scenes/SealedVaultScene.js';
 import { DocumentCheckMiniGameScene } from './scenes/DocumentCheckMiniGameScene.js';
 import { StageClearScene } from './scenes/StageClearScene.js';
+import { GAME_HEIGHT, GAME_WIDTH } from './config/gameDimensions.js';
 
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: 640,
-    height: 360,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     backgroundColor: '#090714',
-    pixelArt: true,
-    antialias: false,
-    roundPixels: true,
+    pixelArt: false,
+    antialias: true,
+    roundPixels: false,
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
@@ -24,7 +27,9 @@ const config = {
         }
     },
     scene: [
+        PreloadScene,
         StartScene,
+        OpeningScene,
         SealedVaultScene,
         DocumentCheckMiniGameScene,
         StageClearScene

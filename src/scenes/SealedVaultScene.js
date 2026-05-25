@@ -6,6 +6,10 @@ import { DialogueManager } from '../systems/DialogueManager.js';
 import { InteractionManager } from '../systems/InteractionManager.js';
 import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
+import { BottomHUD } from '../objects/BottomHUD.js';
+import { TopHUD } from '../objects/TopHUD.js';
+import { ASSETS, hasTexture } from '../systems/AssetManager.js';
+import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 export class SealedVaultScene extends Phaser.Scene {
     constructor() {
@@ -16,9 +20,14 @@ export class SealedVaultScene extends Phaser.Scene {
     create() {
         this.cameras.main.setBackgroundColor(0x090714);
         this.drawBackground();
-        this.dialogue = new DialogueManager(this);
+        this.createHud();
+        this.dialogue = new DialogueManager(this, {
+            showBackdrop: false,
+            layout: this.bottomHud.getDialogLayout()
+        });
 
-        this.player = new Player(this, chapter1Data.playerStart.x, chapter1Data.playerStart.y);
+        const savedPlayerPosition = GameState.get('savedPlayerPosition') || chapter1Data.playerStart;
+        this.player = new Player(this, savedPlayerPosition.x, savedPlayerPosition.y);
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -29,8 +38,7 @@ export class SealedVaultScene extends Phaser.Scene {
             () => this.handleInteraction(config.id)
         ));
 
-        this.createHud();
-        this.interaction = new InteractionManager(this, this.player, this.interactables, this.promptText);
+        this.interaction = new InteractionManager(this, this.player, this.interactables, (prompt) => this.bottomHud.setInteractionPrompt(prompt));
         this.spaceKey.on('down', () => {
             if (!this.dialogue.isActive) {
                 this.interaction.interact();
@@ -38,7 +46,7 @@ export class SealedVaultScene extends Phaser.Scene {
         });
 
         this.input.on('pointerdown', (pointer) => {
-            if (this.dialogue.isActive || pointer.y > 296) {
+            if (this.dialogue.isActive || pointer.y > DIALOG_TOP) {
                 return;
             }
             this.clickTarget = this.clampToWalkable(pointer.x, pointer.y);
@@ -55,6 +63,7 @@ export class SealedVaultScene extends Phaser.Scene {
 
     update() {
         const blocked = this.dialogue.isActive;
+        this.interactables.forEach((item) => item.update?.());
         this.interaction.update(blocked);
         this.refreshHud();
 
@@ -123,6 +132,7 @@ export class SealedVaultScene extends Phaser.Scene {
                 this.dialogue.say(dialogueData.terminalLocked);
                 return;
             }
+            GameState.set('savedPlayerPosition', { x: this.player.x, y: this.player.y });
             this.dialogue.say(dialogueData.terminalReady, () => this.scene.start('DocumentCheckMiniGameScene'));
             return;
         }
@@ -138,6 +148,7 @@ export class SealedVaultScene extends Phaser.Scene {
     }
 
     resolveIntroChoice(result) {
+        console.log('[SealedVaultScene] intro choice result', result);
         GameState.set('hasCheckedInventory', true);
         if (result === 'confident') {
             GameState.decreaseHp(5);
@@ -148,64 +159,87 @@ export class SealedVaultScene extends Phaser.Scene {
     }
 
     drawBackground() {
-        const g = this.add.graphics();
-        g.fillStyle(0x090714, 1).fillRect(0, 0, 640, 360);
-        g.fillStyle(0x140b2c, 1).fillRect(0, 72, 640, 180);
-        g.fillStyle(0x20143c, 1).fillRect(0, 242, 640, 118);
-        g.lineStyle(1, 0x2be8ff, 0.25);
-        for (let x = 0; x < 640; x += 24) {
-            g.lineBetween(x, 252, x - 38, 360);
-            g.lineBetween(x, 252, x + 38, 360);
-        }
-        g.fillStyle(0x05050a, 1).fillRect(40, 84, 72, 68).fillRect(118, 54, 46, 98).fillRect(202, 76, 70, 76);
-        g.fillStyle(0xff4f86, 1).fillRect(56, 98, 8, 8).fillRect(84, 116, 8, 8);
-        g.fillStyle(0x25f3ff, 1).fillRect(124, 62, 6, 52).fillRect(236, 88, 7, 36);
+        const farKey = ASSETS.backgrounds.sealedVaultFar.key;
+        const midKey = ASSETS.backgrounds.sealedVaultMid.key;
+        const legacyKey = ASSETS.backgrounds.sealedVault.key;
 
-        // Replace with public/assets/backgrounds/sealed_vault.png when art is ready.
-        this.add.text(506, 84, 'SEALED\nVAULT', {
+        if (hasTexture(this, farKey)) {
+            this.add.image(CENTER_X, GAME_HEIGHT / 2, farKey)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(0);
+        } else {
+            this.drawFarFallback();
+        }
+
+        if (hasTexture(this, midKey)) {
+            this.add.image(CENTER_X, GAME_HEIGHT / 2, midKey)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(1);
+        } else if (hasTexture(this, legacyKey)) {
+            this.add.image(CENTER_X, GAME_HEIGHT / 2, legacyKey)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(1);
+            this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090714, 0.12)
+                .setDepth(1.1);
+        } else {
+            this.drawMidFallback();
+        }
+
+    }
+
+    drawFarFallback() {
+        const g = this.add.graphics().setDepth(0);
+        g.fillStyle(0x070710, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        g.fillStyle(0x100b21, 1).fillRect(0, 0, GAME_WIDTH, 160);
+        g.fillStyle(0x1a1236, 1).fillRect(0, 52, GAME_WIDTH, 200);
+        g.fillStyle(0x0d1630, 1).fillRect(0, 0, GAME_WIDTH, 110);
+        g.fillStyle(0x2a1a4d, 0.45).fillRect(0, 88, GAME_WIDTH, 42);
+        g.fillStyle(0x25153d, 0.55).fillCircle(168, 78, 78).fillCircle(1066, 62, 88);
+        g.fillStyle(0x2a2047, 0.35).fillRect(96, 40, 80, 120).fillRect(1020, 26, 94, 138);
+        g.fillStyle(0x0a0f18, 1).fillRect(0, 122, GAME_WIDTH, 6);
+    }
+
+    drawMidFallback() {
+        const g = this.add.graphics().setDepth(1);
+        g.fillStyle(0x090714, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        g.fillStyle(0x130b2a, 1).fillRect(0, 134, GAME_WIDTH, 250);
+        g.fillStyle(0x1b1234, 1).fillRect(0, 384, GAME_WIDTH, 150);
+        g.fillStyle(0x20143c, 1).fillRect(0, 484, GAME_WIDTH, GAME_HEIGHT - 484);
+
+        g.fillStyle(0x05050a, 1)
+            .fillRect(74, 170, 150, 126)
+            .fillRect(250, 108, 90, 202)
+            .fillRect(406, 150, 136, 156)
+            .fillRect(692, 152, 124, 154)
+            .fillRect(846, 140, 72, 176);
+
+        g.fillStyle(0x1a2240, 1).fillRect(52, 314, 232, 34).fillRect(318, 300, 186, 28).fillRect(548, 324, 192, 26);
+        g.fillStyle(0xff4f86, 1).fillRect(110, 198, 16, 16).fillRect(168, 230, 16, 16);
+        g.fillStyle(0x25f3ff, 1).fillRect(252, 124, 12, 108).fillRect(472, 176, 12, 72);
+        g.fillStyle(0x4df0b6, 1).fillRect(720, 188, 14, 64).fillRect(872, 168, 14, 92);
+
+        this.add.text(1012, 166, 'SEALED\nVAULT', {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '17px',
+            fontSize: '30px',
             color: '#ffe58a',
             align: 'center',
             stroke: '#31125f',
             strokeThickness: 4
-        }).setOrigin(0.5);
-        g.lineStyle(4, 0x8d7cff, 0.65).strokeCircle(518, 164, 46);
-        g.lineStyle(2, 0xffd36e, 0.8).strokeCircle(518, 164, 18);
-        g.lineBetween(500, 164, 536, 164).lineBetween(518, 146, 518, 182);
+        }).setOrigin(0.5).setDepth(1.1);
 
+        g.lineStyle(1, 0x72f0ff, 0.18);
         const area = chapter1Data.walkableArea;
-        g.lineStyle(1, 0x72f0ff, 0.25).strokeRect(area.x, area.y, area.width, area.height);
+        g.strokeRect(area.x, area.y, area.width, area.height);
     }
 
     createHud() {
-        this.add.rectangle(320, 18, 640, 36, 0x05050a, 0.78);
-        this.titleText = this.add.text(16, 10, chapter1Data.title, {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '14px',
-            color: '#f8f3ff'
-        });
-        this.monthText = this.add.text(320, 10, chapter1Data.month, {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '14px',
-            color: '#75f6ff'
-        }).setOrigin(0.5, 0);
-        this.hpText = this.add.text(624, 10, '', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '14px',
-            color: '#ffd36e'
-        }).setOrigin(1, 0);
-        this.promptText = this.add.text(320, 326, '', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '14px',
-            color: '#c9ffef',
-            backgroundColor: '#05050ad8',
-            padding: { x: 8, y: 4 }
-        }).setOrigin(0.5);
+        this.topHud = new TopHUD(this, { title: chapter1Data.title });
+        this.bottomHud = new BottomHUD(this);
     }
 
     refreshHud() {
-        this.hpText.setText(`HP ${GameState.get('hp')}`);
+        this.topHud.refresh();
+        this.bottomHud.refresh();
     }
 
     clampToWalkable(x, y) {

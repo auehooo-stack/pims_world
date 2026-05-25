@@ -1,8 +1,8 @@
 import { DialogBox } from '../objects/DialogBox.js';
 
 export class DialogueManager {
-    constructor(scene) {
-        this.dialogBox = new DialogBox(scene);
+    constructor(scene, options = {}) {
+        this.dialogBox = new DialogBox(scene, options);
     }
 
     get isActive() {

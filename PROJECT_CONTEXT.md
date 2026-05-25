@@ -63,7 +63,7 @@
 ## 게임 설정
 
 해상도:
-- 640 x 360
+- 1280 x 720
 
 렌더링:
 - pixelArt: true
@@ -74,7 +74,7 @@
 스케일:
 - Phaser.Scale.FIT
 - Phaser.Scale.CENTER_BOTH
-- 브라우저 크기에 맞추되 640x360 비율 유지
+- 브라우저 크기에 맞추되 1280x720 비율 유지
 
 물리:
 - arcade physics 사용

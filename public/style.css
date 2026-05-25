@@ -16,5 +16,5 @@ body {
 }
 
 #game-container canvas {
-    image-rendering: pixelated;
+    image-rendering: auto;
 }
