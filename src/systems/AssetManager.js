@@ -30,6 +30,7 @@ export const ASSETS = {
         sealedVaultMid: image('bg_sealed_vault_mid', '/assets/backgrounds/sealed_vault_mid.png'),
         sealedVaultFront: image('bg_sealed_vault_front', '/assets/backgrounds/sealed_vault_front.png'),
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
+        documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/stage_clear_bg.png'),
         openingLogin: image('bg_opening_login', '/assets/opening/pims_login_screen.png')
     },

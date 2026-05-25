@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { GameState } from '../systems/GameState.js';
 import { ASSETS, hasTexture } from '../systems/AssetManager.js';
 
@@ -11,9 +11,9 @@ const LAYOUT = {
     instruction: { x: 640, y: 420 },
     bottomPanel: { x: 75, y: 455, width: 1130, height: 190 },
     choiceButtons: [
-        { x: 150, y: 548, width: 250, height: 44 },
-        { x: 515, y: 548, width: 250, height: 44 },
-        { x: 880, y: 548, width: 250, height: 44 }
+        { x: 210, y: 528, width: 250, height: 44 },
+        { x: 515, y: 528, width: 250, height: 44 },
+        { x: 830, y: 528, width: 250, height: 44 }
     ],
     inputBox: { x: 120, y: 510, width: 420, height: 70 },
     keypad: { x: 690, y: 500, buttonWidth: 64, buttonHeight: 36, gapX: 14, gapY: 8 }
@@ -99,6 +99,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.problemIndex = 0;
         this.currentInput = '';
         this.waitingForReturn = false;
+        this.completed = false;
         this.dynamicObjects = [];
     }
 
@@ -106,11 +107,13 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.problemIndex = 0;
         this.currentInput = '';
         this.waitingForReturn = false;
+        this.completed = false;
         this.dynamicObjects = [];
 
         this.cameras.main.setBackgroundColor(0x090714);
         this.createBackdrop();
         this.createStaticHeader();
+        this.input.keyboard.on('keydown', this.handleKeyboardInput, this);
         this.renderProblem(0);
 
         this.events.once('shutdown', () => this.cleanup());
@@ -119,12 +122,13 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     createBackdrop() {
         const bgKey = ASSETS.backgrounds.documentCheck.key;
         if (hasTexture(this, bgKey)) {
-            const bg = this.add.image(640, 360, bgKey);
-            bg.setDisplaySize(1280, 720);
-            bg.setDepth(0);
+            this.backdrop = this.add.image(640, 360, bgKey);
+            this.backdrop.setDisplaySize(1280, 720);
+            this.backdrop.setDepth(0);
             return;
         }
 
+        this.backdrop = null;
         const g = this.add.graphics();
         g.setDepth(0);
         g.fillStyle(0x090714, 1).fillRect(0, 0, 1280, 720);
@@ -165,6 +169,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.progressText.setText(`${index + 1}/3`);
         this.instructionText.setText(problem.instruction);
         this.instructionText.setColor(COLORS.bottomText);
+        this.instructionText.setY(LAYOUT.instruction.y + 10);
         this.hpText.setText(`HP ${GameState.get('hp') ?? 100}`);
 
         this.renderComparisonPanels(problem);
@@ -305,7 +310,6 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     createButton({ x, y, width, height, label, onClick, fontSize }) {
         const bg = this.add.rectangle(x, y, width, height, COLORS.buttonBg, 1)
             .setOrigin(0, 0)
-            .setStrokeStyle(2, COLORS.buttonBorder, 0.85)
             .setDepth(100);
 
         const text = this.add.text(x + width / 2, y + height / 2, label, {
@@ -345,6 +349,42 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         }
 
         this.applyWrongAnswer(problem.wrongMessage);
+    }
+
+    handleKeyboardInput(event) {
+        if (this.completed) {
+            if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
+                event.preventDefault?.();
+                this.scene.start('SealedVaultScene');
+            }
+            return;
+        }
+
+        if (this.waitingForReturn) {
+            return;
+        }
+
+        const problem = PROBLEMS[this.problemIndex];
+        if (!problem || problem.type !== 'numeric') {
+            return;
+        }
+
+        if (event.code === 'Backspace') {
+            event.preventDefault?.();
+            this.deleteLastDigit();
+            return;
+        }
+
+        if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+            event.preventDefault?.();
+            this.submitNumericAnswer();
+            return;
+        }
+
+        const match = event.code.match(/^Digit([0-9])$/) || event.code.match(/^Numpad([0-9])$/);
+        if (match) {
+            this.handleNumberInput(match[1]);
+        }
     }
 
     handleNumberInput(value) {
@@ -482,15 +522,73 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     completeMiniGame() {
         GameState.set('pimsRegistered', true);
         GameState.set('miniGameCleared', true);
+        this.completed = true;
+        this.waitingForReturn = false;
+
+        const clearBgKey = ASSETS.backgrounds.documentCheckClear.key;
+        if (this.backdrop && hasTexture(this, clearBgKey)) {
+            this.backdrop.setTexture(clearBgKey);
+            this.backdrop.setDisplaySize(1280, 720);
+        }
+
         this.clearDynamicUI();
 
-        this.instructionText.setText('필수서류 등록 완료. 사업비 교부 준비가 끝났습니다.');
+        this.progressText.setText('');
+        this.instructionText.setText('필수서류 등록 완료');
         this.instructionText.setColor(COLORS.success);
-        this.showFeedback('문서 검수 완료', COLORS.success, 0.9);
+        this.instructionText.setY(220);
+        this.instructionText.setFontSize('28px');
+        this.instructionText.setFontStyle('bold');
 
-        this.time.delayedCall(900, () => {
-            this.scene.start('SealedVaultScene');
+        this.subInstructionText = this.add.text(640, 274, '사업비 교부 준비가 끝났습니다.', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '18px',
+            color: COLORS.success,
+            align: 'center'
+        }).setOrigin(0.5, 0.5).setDepth(200);
+        this.dynamicObjects.push(this.subInstructionText);
+
+        this.flashOverlay = this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0);
+        this.flashOverlay.setDepth(190);
+        this.flashOverlay.setAlpha(0);
+        this.tweens.add({
+            targets: this.flashOverlay,
+            alpha: { from: 0, to: 0.22 },
+            duration: 160,
+            yoyo: true,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                this.flashOverlay.destroy();
+                this.flashOverlay = null;
+            }
         });
+
+        const sparklePositions = [
+            [360, 250],
+            [470, 205],
+            [805, 220],
+            [930, 270]
+        ];
+        sparklePositions.forEach(([x, y]) => {
+            const sparkle = this.add.circle(x, y, 3, 0xffffff, 0.9).setDepth(191);
+            this.tweens.add({
+                targets: sparkle,
+                y: y - 30,
+                alpha: 0,
+                duration: 760,
+                delay: 60,
+                ease: 'Sine.easeOut',
+                onComplete: () => sparkle.destroy()
+            });
+        });
+
+        this.endPromptText = this.add.text(640, 672, 'Space 또는 Enter: 다음 장면', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '18px',
+            color: COLORS.darkSubText,
+            align: 'center'
+        }).setOrigin(0.5, 0.5).setDepth(200);
+        this.dynamicObjects.push(this.endPromptText);
     }
 
     clearDynamicUI() {
@@ -520,6 +618,8 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     }
 
     cleanup() {
+        this.input.keyboard.off('keydown', this.handleKeyboardInput, this);
         this.clearDynamicUI();
     }
 }
+
