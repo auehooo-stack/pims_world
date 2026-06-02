@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { loadAssets } from '../systems/AssetManager.js';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
@@ -18,7 +18,7 @@ export class PreloadScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor(0x090714);
         this.add.text(centerX, centerY - 54, 'LOADING ASSETS', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '28px',
             color: '#fff5c7'
         }).setOrigin(0.5);
@@ -28,7 +28,7 @@ export class PreloadScene extends Phaser.Scene {
         const bar = this.add.rectangle(centerX - barWidth / 2, centerY, 0, barHeight, 0x75f6ff, 1)
             .setOrigin(0, 0.5);
         const status = this.add.text(centerX, centerY + 34, '0%', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef'
         }).setOrigin(0.5);
@@ -56,3 +56,4 @@ export class PreloadScene extends Phaser.Scene {
         this.scene.start(DEV_START_SCENE);
     }
 }
+

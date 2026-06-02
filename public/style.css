@@ -1,9 +1,16 @@
+﻿@font-face {
+    font-family: 'GALMURI';
+    src: url('/assets/fonts/Galmuri11.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 body {
     margin: 0;
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
     background-color: #090714;
-    font-family: Arial, sans-serif;
+    font-family: 'GALMURI', Arial, sans-serif;
 }
 
 #app {
@@ -18,3 +25,4 @@ body {
 #game-container canvas {
     image-rendering: auto;
 }
+

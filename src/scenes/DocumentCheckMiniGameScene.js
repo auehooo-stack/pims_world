@@ -139,19 +139,19 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
 
     createStaticHeader() {
         this.progressText = this.add.text(LAYOUT.progress.x, LAYOUT.progress.y, '1/3', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.progress
         }).setOrigin(0.5, 0.5).setDepth(50);
 
         this.hpText = this.add.text(LAYOUT.hp.x, LAYOUT.hp.y, `HP ${GameState.get('hp') ?? 100}`, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: '#ffd36e'
         }).setOrigin(1, 0.5).setDepth(50);
 
         this.instructionText = this.add.text(LAYOUT.instruction.x, LAYOUT.instruction.y, '', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.bottomText,
             align: 'center',
@@ -187,34 +187,34 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         const right = LAYOUT.rightPanel;
 
         const leftTitle = this.add.text(left.x + 30, left.y + 30, problem.left.title, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.paperText
         }).setDepth(50);
         const leftField = this.add.text(left.x + 30, left.y + 70, problem.left.field, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.paperAccent
         }).setDepth(50);
         const leftValue = this.add.text(left.x + 30, left.y + 120, problem.left.value, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '26px',
             color: COLORS.paperText
         }).setDepth(50);
 
         const rightTitle = this.add.text(right.x + 35, right.y + 30, problem.right.title, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.darkSubText
         }).setDepth(50);
         const rightField = this.add.text(right.x + 35, right.y + 70, problem.right.field, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.darkSubText
         }).setDepth(50);
 
         const rightValue = this.add.text(right.x + 35, right.y + 120, problem.right.value, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: problem.type === 'choice' ? '24px' : '26px',
             color: COLORS.darkText
         }).setDepth(50);
@@ -254,13 +254,13 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         ).setOrigin(0, 0).setStrokeStyle(1, COLORS.inputBorder, 0.9).setDepth(5);
 
         const inputLabel = this.add.text(LAYOUT.inputBox.x + 25, LAYOUT.inputBox.y + 15, '입력값', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.bottomText
         }).setDepth(50);
 
         this.inputValueText = this.add.text(LAYOUT.inputBox.x + 25, LAYOUT.inputBox.y + 42, this.currentInput || '__', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '32px',
             color: COLORS.inputText
         }).setDepth(50);
@@ -313,7 +313,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
             .setDepth(100);
 
         const text = this.add.text(x + width / 2, y + height / 2, label, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize,
             color: '#f8f3ff',
             align: 'center'
@@ -504,7 +504,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         }
 
         this.feedbackText = this.add.text(640, 612, message, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color,
             align: 'center',
@@ -541,7 +541,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.instructionText.setFontStyle('bold');
 
         this.subInstructionText = this.add.text(640, 274, '사업비 교부 준비가 끝났습니다.', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.success,
             align: 'center'
@@ -583,7 +583,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         });
 
         this.endPromptText = this.add.text(640, 672, 'Space 또는 Enter: 다음 장면', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.darkSubText,
             align: 'center'
@@ -622,4 +622,5 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.clearDynamicUI();
     }
 }
+
 

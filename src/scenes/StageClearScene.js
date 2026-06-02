@@ -61,7 +61,7 @@ export class StageClearScene extends Phaser.Scene {
                 const y = 416 + (i * 39) % 144;
                 g.fillCircle(x, y, 12);
                 this.add.text(x, y - 3, 'COIN', {
-                    fontFamily: 'Arial, sans-serif',
+                    fontFamily: 'GALMURI, Arial, sans-serif',
                     fontSize: '12px',
                     color: '#553500'
                 }).setOrigin(0.5);
@@ -98,11 +98,19 @@ export class StageClearScene extends Phaser.Scene {
             fontSize: '48px',
             color: '#fff5c7',
             stroke: '#5c1dff',
-            strokeThickness: 5
+            strokeThickness: 5,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5);
 
         this.subText = this.add.text(CENTER_X, 154, '사업비 교부 완료', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '22px',
             color: '#f8f3ff'
         }).setOrigin(0.5);
@@ -296,7 +304,7 @@ export class StageClearScene extends Phaser.Scene {
         this.createEndingOverlay();
 
         this.add.text(CENTER_X, 510, '다음 업데이트에서 2단계 [집행의 집]이 열립니다.', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#c9ffef',
             align: 'center',
@@ -349,7 +357,7 @@ export class StageClearScene extends Phaser.Scene {
                 .setDepth(100);
         }
         const text = this.add.text(x, y, label, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
             color: '#ffffff',
             stroke: '#000000',
@@ -380,3 +388,4 @@ export class StageClearScene extends Phaser.Scene {
         text.setInteractive({ useHandCursor: true }).on('pointerdown', onClick);
     }
 }
+

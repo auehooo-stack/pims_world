@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { ASSETS, getInteractableTextureKey, hasTexture, setLinearTextureFilter } from '../systems/AssetManager.js';
 
 export class InteractableObject {
@@ -13,19 +13,17 @@ export class InteractableObject {
         this.isAssistant = this.id === 'assistant';
         this.animated = Boolean(config.animated);
         this.textureKey = getInteractableTextureKey(this.id);
-        this.assistantWalkTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantWalk.key : null;
+        this.assistantOpenTextureKey = this.isAssistant ? ASSETS.characters.kcaAssistantIdle.key : null;
+        this.assistantClosedTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantClosed.key : null;
+        this.hideVisuals = Boolean(config.hideVisuals);
         setLinearTextureFilter(scene, this.textureKey);
-        if (this.assistantWalkTextureKey) {
-            setLinearTextureFilter(scene, this.assistantWalkTextureKey);
+        if (this.assistantOpenTextureKey) {
+            setLinearTextureFilter(scene, this.assistantOpenTextureKey);
         }
-        this.assistantPatrolBounds = this.isAssistant
-            ? {
-                minX: config.x - 68,
-                maxX: config.x + 68
-            }
-            : null;
-        this.assistantIdleCall = null;
-        this.assistantMoveTween = null;
+        if (this.assistantClosedTextureKey) {
+            setLinearTextureFilter(scene, this.assistantClosedTextureKey);
+        }
+        this.assistantBlinkCall = null;
 
         this.container = scene.add.container(config.x, config.y).setDepth(2);
         this.shadow = scene.add.ellipse(0, config.height / 2 - 2, config.width * (this.isVault ? 0.9 : 0.82), this.isVault ? 14 : 12, 0x000000, this.isVault ? 0.24 : 0.3)
@@ -38,7 +36,7 @@ export class InteractableObject {
         const labelOffset = this.isVault ? 12 : 10;
         const labelY = config.height / 2 + labelOffset;
         this.label = scene.add.text(0, labelY, config.name, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: this.isVault ? '#ffe8a8' : '#f6f0ff',
             backgroundColor: this.isVault ? '#1a1830' : '#120c22'
@@ -53,12 +51,24 @@ export class InteractableObject {
             this.container.add([this.wallAccent, this.leftSeam, this.rightSeam]);
         }
 
+        if (this.hideVisuals) {
+            this.shadow.setVisible(false);
+            this.body.setVisible(false);
+            this.label.setVisible(false);
+            this.wallAccent?.setVisible(false);
+            this.leftSeam?.setVisible(false);
+            this.rightSeam?.setVisible(false);
+        }
+
         if (this.textureKey && hasTexture(scene, this.textureKey)) {
             this.image = scene.add.image(0, 0, this.textureKey);
             this.image.setDisplaySize(config.width, config.height);
             this.image.disableInteractive?.();
             this.body.setAlpha(0);
             this.container.add(this.image);
+            if (this.hideVisuals) {
+                this.image.setVisible(false);
+            }
         }
 
         const needsFallbackMark = !this.image;
@@ -70,19 +80,22 @@ export class InteractableObject {
                     .setOrigin(0.5);
             } else {
                 this.mark = scene.add.text(0, -config.height / 2 - 20, '!', {
-                    fontFamily: 'Arial Black, Arial, sans-serif',
+                    fontFamily: 'GALMURI, Arial, sans-serif',
                     fontSize: '18px',
                     color: '#ffd36e'
                 }).setOrigin(0.5);
             }
             this.container.add(this.mark);
             this.mark.setVisible(false);
+            if (this.hideVisuals) {
+                this.mark.setVisible(false);
+            }
         }
 
         this.container.add(this.label);
 
         if (this.isAssistant) {
-            this.queueAssistantIdle(Phaser.Math.Between(700, 1400));
+            this.queueAssistantBlink(Phaser.Math.Between(1100, 2600));
         }
     }
 
@@ -99,68 +112,44 @@ export class InteractableObject {
         this.image.setTexture(textureKey);
     }
 
-    queueAssistantIdle(delayMs) {
+    queueAssistantBlink(delayMs) {
         if (!this.isAssistant) {
             return;
         }
 
-        this.assistantIdleCall?.remove(false);
-        this.assistantIdleCall = this.container.scene.time.delayedCall(delayMs, () => this.startAssistantMove());
+        this.assistantBlinkCall?.remove(false);
+        this.assistantBlinkCall = this.container.scene.time.delayedCall(delayMs, () => this.startAssistantBlink());
     }
 
-    startAssistantMove() {
+    startAssistantBlink() {
         if (!this.isAssistant || !this.container?.scene) {
             return;
         }
 
-        this.assistantMoveTween?.stop();
-
-        const currentX = this.container.x;
-        const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
-        const step = Phaser.Math.Between(28, 64) * direction;
-        let targetX = Phaser.Math.Clamp(currentX + step, this.assistantPatrolBounds.minX, this.assistantPatrolBounds.maxX);
-
-        if (targetX === currentX) {
-            targetX = direction < 0 ? this.assistantPatrolBounds.minX : this.assistantPatrolBounds.maxX;
+        if (!this.image || !this.assistantClosedTextureKey || !hasTexture(this.container.scene, this.assistantClosedTextureKey)) {
+            this.queueAssistantBlink(Phaser.Math.Between(1600, 2800));
+            return;
         }
 
-        const distance = Math.abs(targetX - currentX);
-        const duration = Phaser.Math.Clamp(distance * 24, 780, 1600);
-
-        if (this.assistantWalkTextureKey && hasTexture(this.container.scene, this.assistantWalkTextureKey)) {
-            this.image?.setTexture(this.assistantWalkTextureKey);
-        }
-        this.image?.setFlipX(direction < 0);
-
-        this.assistantMoveTween = this.container.scene.tweens.add({
-            targets: this.container,
-            x: targetX,
-            duration,
-            ease: 'Sine.easeInOut',
-            onUpdate: () => {
-                this.x = this.container.x;
-                this.y = this.container.y;
-                this.image?.setFlipX(direction < 0);
-            },
-            onComplete: () => {
-                this.assistantMoveTween = null;
-                this.setAssistantTexture(this.textureKey);
-                this.image?.setFlipX(direction < 0);
-                this.queueAssistantIdle(Phaser.Math.Between(700, 1600));
+        this.image.setTexture(this.assistantClosedTextureKey);
+        this.assistantBlinkCall = this.container.scene.time.delayedCall(140, () => {
+            if (!this.image) {
+                return;
             }
+            this.image.setTexture(this.assistantOpenTextureKey || this.textureKey);
+            this.queueAssistantBlink(Phaser.Math.Between(1800, 3200));
         });
     }
 
     setInteractionFocus(isFocused) {
-        if (!this.mark) {
+        if (!this.mark || this.hideVisuals) {
             return;
         }
         this.mark.setVisible(Boolean(isFocused));
     }
 
     destroy(fromScene) {
-        this.assistantIdleCall?.remove(false);
-        this.assistantMoveTween?.stop();
+        this.assistantBlinkCall?.remove(false);
         this.image?.destroy();
         this.mark?.destroy();
         this.label?.destroy();
@@ -172,3 +161,4 @@ export class InteractableObject {
         this.container?.destroy();
     }
 }
+

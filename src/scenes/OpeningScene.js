@@ -147,7 +147,7 @@ export class OpeningScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setDepth(ASSISTANT_DEPTHS.button + 20);
         this.skipButtonText = this.add.text(GAME_WIDTH - 88, GAME_HEIGHT - 46, 'Skip', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff'
         }).setOrigin(0.5).setDepth(ASSISTANT_DEPTHS.button + 21);
@@ -208,11 +208,19 @@ export class OpeningScene extends Phaser.Scene {
             fontSize: '72px',
             color: '#fff5c7',
             stroke: '#5c1dff',
-            strokeThickness: 6
+            strokeThickness: 6,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5));
 
         this.track(this.add.text(CENTER_X, 274, 'ICT기금 사업관리 시스템 접속 중...', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '26px',
             color: '#c9ffef'
         }).setOrigin(0.5));
@@ -248,11 +256,19 @@ export class OpeningScene extends Phaser.Scene {
             color: '#fff5c7',
             stroke: '#7e1018',
             strokeThickness: 6,
-            align: 'center'
+            align: 'center',
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5));
 
         const warningBody = this.track(this.add.text(CENTER_X, 324, '운영 체제를 강제 재구성합니다.', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#ffe5ea',
             align: 'center'
@@ -295,10 +311,18 @@ export class OpeningScene extends Phaser.Scene {
             fontSize: '34px',
             color: '#75f6ff',
             stroke: '#1c0f35',
-            strokeThickness: 6
+            strokeThickness: 6,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5));
         const subText = this.track(this.add.text(CENTER_X, 322, 'PIMS WORLD LOADING...', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#fff5c7'
         }).setOrigin(0.5));
@@ -328,7 +352,7 @@ export class OpeningScene extends Phaser.Scene {
             const y = Phaser.Math.Between(112, GAME_HEIGHT - 120);
             const fragmentText = ['PIMS', 'WORLD', 'REBUILD', '//', 'ACCESS', 'ERROR'][Phaser.Math.Between(0, 5)];
             const fragment = this.track(this.add.text(x, y, fragmentText, {
-                fontFamily: 'Arial Black, Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: `${Phaser.Math.Between(12, 24)}px`,
                 color: Phaser.Math.Between(0, 1) ? '#75f6ff' : '#ff6b7a',
                 stroke: '#090714',
@@ -374,7 +398,15 @@ export class OpeningScene extends Phaser.Scene {
             fontSize: '72px',
             color: '#fff5c7',
             stroke: '#5c1dff',
-            strokeThickness: 8
+            strokeThickness: 8,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5));
         this.tweens.add({
             targets: title,
@@ -386,7 +418,7 @@ export class OpeningScene extends Phaser.Scene {
         });
 
         this.track(this.add.text(CENTER_X, 330, '퇴근 없는 테마파크', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '28px',
             color: '#75f6ff'
         }).setOrigin(0.5));
@@ -476,7 +508,7 @@ export class OpeningScene extends Phaser.Scene {
             ASSISTANT_LAYOUT.nameY,
             'KCA 간사',
             {
-                fontFamily: 'Arial Black, Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: '20px',
                 color: '#ffd36e'
             }
@@ -487,7 +519,7 @@ export class OpeningScene extends Phaser.Scene {
             ASSISTANT_LAYOUT.bodyY,
             '',
             {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: `${ASSISTANT_LAYOUT.bodyFontSize}px`,
                 color: '#f8f3ff',
                 wordWrap: { width: ASSISTANT_LAYOUT.bodyWrapWidth },
@@ -500,7 +532,7 @@ export class OpeningScene extends Phaser.Scene {
             ASSISTANT_LAYOUT.promptY,
             '',
             {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: '15px',
                 color: '#c9ffef'
             }
@@ -608,3 +640,4 @@ export class OpeningScene extends Phaser.Scene {
         // no-op: assistant lines now advance only by click or Enter.
     }
 }
+

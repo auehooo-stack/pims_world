@@ -1,4 +1,4 @@
-import { BOTTOM_HUD_HEIGHT, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
+﻿import { BOTTOM_HUD_HEIGHT, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 import { ASSETS, getInventoryIconKey, hasTexture } from '../systems/AssetManager.js';
 import { GameState } from '../systems/GameState.js';
 
@@ -39,7 +39,7 @@ export class BottomHUD {
 
     createInventory() {
         this.inventoryTitle = this.scene.add.text(930, PANEL_TOP + 18, 'INVENTORY', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '14px',
             color: '#ffd36e'
         });
@@ -68,7 +68,7 @@ export class BottomHUD {
 
                 const icon = null;
                 const text = this.scene.add.text(x + slotWidth / 2, y + slotHeight / 2, '', {
-                    fontFamily: 'Arial, sans-serif',
+                    fontFamily: 'GALMURI, Arial, sans-serif',
                     fontSize: '8px',
                     color: '#f8f3ff',
                     align: 'center',
@@ -85,7 +85,7 @@ export class BottomHUD {
 
     createInteractionPrompt() {
         this.interactionPrompt = this.scene.add.text(34, PANEL_TOP + 20, '', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef',
             wordWrap: { width: 820 }
@@ -162,3 +162,4 @@ export class BottomHUD {
         this.container?.destroy(true);
     }
 }
+

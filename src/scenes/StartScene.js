@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { GameState } from '../systems/GameState.js';
 import { CENTER_X, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 import { ASSETS, hasTexture, playAudioIfAvailable } from '../systems/AssetManager.js';
@@ -34,23 +34,31 @@ export class StartScene extends Phaser.Scene {
             fontSize: '78px',
             color: '#fff5c7',
             stroke: '#5c1dff',
-            strokeThickness: 6
+            strokeThickness: 6,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
         }).setOrigin(0.5);
 
         this.add.text(CENTER_X, 302, '퇴근없는 테마파크', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '34px',
             color: '#75f6ff'
         }).setOrigin(0.5);
 
         this.add.text(CENTER_X, 386, 'ICT기금 사업관리 15개월 사이클을 완수하라', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#f8f3ff'
         }).setOrigin(0.5);
 
         const startText = this.add.text(CENTER_X, 612, 'Click or Tap to Start', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#ffd36e'
         }).setOrigin(0.5);
@@ -63,3 +71,4 @@ export class StartScene extends Phaser.Scene {
         });
     }
 }
+

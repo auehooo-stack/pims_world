@@ -37,8 +37,14 @@ export const ASSETS = {
     },
     characters: {
         kimDaeriIdle: image('char_kim_daeri_idle', '/assets/characters/kim_daeri_idle.png'),
+        kimDaeriWalk1: image('char_kim_daeri_walk_1', '/assets/characters/kim_daeri_walk_1.png'),
+        kimDaeriWalk2: image('char_kim_daeri_walk_2', '/assets/characters/kim_daeri_walk_2.png'),
+        kimDaeriWalk3: image('char_kim_daeri_walk_3', '/assets/characters/kim_daeri_walk_3.png'),
+        kimDaeriWalk4: image('char_kim_daeri_walk_4', '/assets/characters/kim_daeri_walk_4.png'),
         kimDaeriWalk: image('char_kim_daeri_walk', '/assets/characters/kim_daeri_walk.png'),
+        kimDaeriClosed: image('char_kim_daeri_closed', '/assets/characters/kim_daeri_closed.png'),
         kcaAssistantIdle: image('char_kca_assistant_idle', '/assets/characters/kca_assistant_idle.png'),
+        kcaAssistantClosed: image('char_kca_assistant_closed', '/assets/characters/kca_assistant_closed.png'),
         kcaAssistantWalk: image('char_kca_assistant_walk', '/assets/characters/kca_assistant_walk.png')
     },
     objects: {

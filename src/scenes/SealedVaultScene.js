@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { chapter1Data } from '../data/chapter1Data.js';
 import { dialogueData } from '../data/dialogueData.js';
 import { GameState } from '../systems/GameState.js';
@@ -131,7 +131,7 @@ export class SealedVaultScene extends Phaser.Scene {
                 .setStrokeStyle(1, 0x75f6ff, 0.45)
                 .setDepth(1200);
             const toastText = this.add.text(CENTER_X, 420, '서류 2장을 찾았습니다.', {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: '18px',
                 color: '#f8f3ff',
                 stroke: '#000000',
@@ -221,9 +221,10 @@ export class SealedVaultScene extends Phaser.Scene {
         const farKey = ASSETS.backgrounds.sealedVaultFar.key;
         const midKey = ASSETS.backgrounds.sealedVaultMid.key;
         const legacyKey = ASSETS.backgrounds.sealedVault.key;
+        const bgY = GAME_HEIGHT / 2 - 26;
 
         if (hasTexture(this, farKey)) {
-            this.add.image(CENTER_X, GAME_HEIGHT / 2, farKey)
+            this.add.image(CENTER_X, bgY, farKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(0);
         } else {
@@ -231,11 +232,11 @@ export class SealedVaultScene extends Phaser.Scene {
         }
 
         if (hasTexture(this, midKey)) {
-            this.add.image(CENTER_X, GAME_HEIGHT / 2, midKey)
+            this.add.image(CENTER_X, bgY, midKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(1);
         } else if (hasTexture(this, legacyKey)) {
-            this.add.image(CENTER_X, GAME_HEIGHT / 2, legacyKey)
+            this.add.image(CENTER_X, bgY, legacyKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(1);
             this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090714, 0.12)
@@ -278,7 +279,7 @@ export class SealedVaultScene extends Phaser.Scene {
         g.fillStyle(0x4df0b6, 1).fillRect(720, 188, 14, 64).fillRect(872, 168, 14, 92);
 
         this.add.text(1012, 166, 'SEALED\nVAULT', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '30px',
             color: '#ffe58a',
             align: 'center',
@@ -314,3 +315,4 @@ export class SealedVaultScene extends Phaser.Scene {
         this.player.setPosition(clamped.x, clamped.y);
     }
 }
+

@@ -1,10 +1,10 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { CENTER_X, DIALOG_HEIGHT, DIALOG_TOP, DIALOG_WIDTH, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 import { ASSETS, hasTexture } from '../systems/AssetManager.js';
 import { GameState } from '../systems/GameState.js';
 
 const TEXT_STYLE = {
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: 'GALMURI, Arial, sans-serif',
     fontSize: '17px',
     color: '#f8f3ff',
     wordWrap: { width: DIALOG_WIDTH - 52 },
@@ -45,7 +45,7 @@ export class DialogBox {
         }
 
         this.speakerText = scene.add.text(this.layout.x, this.layout.y, '', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#ffd36e'
         });
@@ -54,7 +54,7 @@ export class DialogBox {
             wordWrap: { width: this.layout.bodyWidth }
         });
         this.hintText = scene.add.text(this.layout.hintX, this.layout.hintY, 'Space/Enter', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '12px',
             color: '#9aa0c8'
         }).setOrigin(1, 0.5);
@@ -135,7 +135,7 @@ export class DialogBox {
             }
 
             const textObj = this.scene.add.text(this.layout.choiceX + 12, buttonY + 5, `${index + 1}. ${choice.label}`, {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: '13px',
                 color: '#c9ffef',
                 wordWrap: { width: buttonWidth - 24 }
@@ -286,3 +286,4 @@ export class DialogBox {
         this.container?.destroy(true);
     }
 }
+

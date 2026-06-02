@@ -1,4 +1,4 @@
-import { GAME_WIDTH, HUD_HEIGHT } from '../config/gameDimensions.js';
+﻿import { GAME_WIDTH, HUD_HEIGHT } from '../config/gameDimensions.js';
 import { ASSETS, hasTexture } from '../systems/AssetManager.js';
 import { GameState } from '../systems/GameState.js';
 
@@ -25,7 +25,7 @@ export class TopHUD {
             this.container.add(scene.add.rectangle(GAME_WIDTH / 2, HUD_HEIGHT + OBJECTIVE_BAR_HEIGHT / 2, GAME_WIDTH, OBJECTIVE_BAR_HEIGHT, 0x120f1a, 0.36));
         }
         this.titleText = scene.add.text(28, 18, title, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
             color: '#f8f3ff'
         });
@@ -35,7 +35,7 @@ export class TopHUD {
         this.executionText = this.createMetric(810, 18, ASSETS.icons.executionRate.key, '집행률');
         this.budgetText = this.createMetric(1008, 18, ASSETS.icons.budgetCoin.key, '사업비');
         this.objectiveText = scene.add.text(28, HUD_HEIGHT + 8, '', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff5c7'
         }).setAlpha(0.92);
@@ -59,7 +59,7 @@ export class TopHUD {
             container.add(this.scene.add.image(0, 10, iconKey).setDisplaySize(14, 14).setOrigin(0, 0.5));
         }
         const text = this.scene.add.text(hasTexture(this.scene, iconKey) ? 20 : 0, 0, `${label}:`, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
             color: '#c9ffef'
         });
@@ -79,3 +79,4 @@ export class TopHUD {
         this.container?.destroy(true);
     }
 }
+
