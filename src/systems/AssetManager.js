@@ -51,7 +51,8 @@ export const ASSETS = {
         cabinet: image('obj_cabinet', '/assets/objects/cabinet.png'),
         pimsTerminal: image('obj_pims_terminal', '/assets/objects/pims_terminal.png'),
         vaultDoorClosed: image('obj_vault_door_closed', '/assets/objects/vault_door_closed.png'),
-        vaultDoorOpen: image('obj_vault_door_open', '/assets/objects/vault_door_open.png')
+        vaultDoorOpen: image('obj_vault_door_open', '/assets/objects/vault_door_open.png'),
+        receipt: image('obj_receipt', '/assets/objects/receipt.png')
     },
     ui: {
         dialogPanel: image('ui_dialog_panel', '/assets/ui/dialog_panel.png'),
@@ -59,6 +60,11 @@ export const ASSETS = {
         objectiveBar: image('ui_objective_bar', '/assets/ui/objective_bar.png'),
         inventoryPanel: image('ui_inventory_panel', '/assets/ui/inventory_panel.png'),
         inventorySlot: image('ui_inventory_slot', '/assets/ui/inventory_slot.png'),
+        stageBox: image('ui_top_stage_box', '/assets/ui/top/ui_top_stage_box.png'),
+        dateBox: image('ui_top_date_box', '/assets/ui/top/date_box.png'),
+        executionBox: image('ui_top_execution_box', '/assets/ui/top/execution_box.png'),
+        hpBox: image('ui_top_hp_box', '/assets/ui/top/hp_box.png'),
+        settingsButton: image('ui_top_settings_button', '/assets/ui/top/settings_button.png'),
         buttonNormal: image('ui_button_normal', '/assets/ui/button_normal.png'),
         buttonHover: image('ui_button_hover', '/assets/ui/button_hover.png')
     },
@@ -75,6 +81,11 @@ export const ASSETS = {
         ndaDocument: image('icon_nda_document', '/assets/icons/nda_document.png'),
         budgetCoin: image('icon_budget_coin', '/assets/icons/budget_coin.png'),
         hpHeart: image('icon_hp_heart', '/assets/icons/hp_heart.png'),
+        hpHeartFull: image('icon_hp_heart_full', '/assets/icons/heart-full.png'),
+        hpHeartThreeQuarter: image('icon_hp_heart_three_quarter', '/assets/icons/heart-1.png'),
+        hpHeartHalf: image('icon_hp_heart_half', '/assets/icons/heart-half.png'),
+        hpHeartQuarter: image('icon_hp_heart_quarter', '/assets/icons/heart-3.png'),
+        hpHeartEmpty: image('icon_hp_heart_empty', '/assets/icons/heart-empty.png'),
         calendar: image('icon_calendar', '/assets/icons/calendar.png'),
         executionRate: image('icon_execution_rate', '/assets/icons/execution_rate.png'),
         interactMark: image('icon_interact_mark', '/assets/icons/interact_mark.png')
@@ -166,6 +177,9 @@ export const getInventoryIconKey = (id) => {
             return ASSETS.icons.ndaDocument.key;
         case 'budgetCoin':
             return ASSETS.icons.budgetCoin.key;
+        case 'stage2Receipts':
+        case 'receipt':
+            return ASSETS.objects.receipt.key;
         default:
             return null;
     }

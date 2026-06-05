@@ -176,6 +176,12 @@ export class SealedVaultScene extends Phaser.Scene {
         GameState.set('hasCheckedInventory', true);
         if (result === 'confident') {
             GameState.decreaseHp(5);
+            if ((GameState.get('hp') ?? 0) <= 0) {
+                this.time.delayedCall(100, () => {
+                    this.scene.start('GameOverScene');
+                });
+                return;
+            }
             this.dialogue.say(dialogueData.confidentResult);
             return;
         }

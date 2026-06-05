@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { chapter2Data } from '../data/chapter2Data.js';
 import { GameState } from '../systems/GameState.js';
 import { DialogueManager } from '../systems/DialogueManager.js';
@@ -7,6 +7,7 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
+import { ASSETS, hasTexture } from '../systems/AssetManager.js';
 import { CENTER_X, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const RECEIPT_COLORS = {
@@ -171,13 +172,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
     createHud() {
         this.topHud = new TopHUD(this, { title: chapter2Data.title });
         this.bottomHud = new BottomHUD(this);
-        this.timerText = this.add.text(GAME_WIDTH - 28, 16, 'D-15', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#fff5c7',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(1, 0).setDepth(860);
     }
 
     createWorld() {
@@ -317,6 +311,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.stagePhase = 'collect';
         GameState.set('stage2BriefingDone', true);
         GameState.set('stage2Phase', 'collect');
+        console.log('[ExecutionHouseScene] beginCollectionPhase');
         this.updateReceiptState();
         this.spawnReceiptBurst(6);
         this.showToast('영수증을 주워 모으세요.', 0xc9ffef);
@@ -331,7 +326,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         GameState.set('stage2Phase', 'sort');
         this.timerDays = chapter2Data.timerDays;
         GameState.set('stage2TimerRemaining', this.timerDays);
-        this.refreshTimerText();
         this.updateReceiptState();
         this.startSortingTimer();
         this.showToast('이제 바구니로 분류하세요.', 0xfff0a8);
@@ -348,7 +342,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 }
                 this.timerDays = Math.max(0, this.timerDays - 1);
                 GameState.set('stage2TimerRemaining', this.timerDays);
-                this.refreshTimerText();
                 if (this.timerDays <= 0) {
                     this.failStage('시간 초과! 집행의 집을 비워야 합니다.');
                 }
@@ -356,12 +349,9 @@ export class ExecutionHouseScene extends Phaser.Scene {
         });
     }
 
-    refreshTimerText() {
-        this.timerText?.setText(`D-${this.timerDays}`);
-    }
-
     spawnReceiptBurst(count) {
         const burstCount = Math.min(count, this.pendingReceipts.length);
+        console.log('[ExecutionHouseScene] spawnReceiptBurst', { count, burstCount, pending: this.pendingReceipts.length });
         for (let i = 0; i < burstCount; i += 1) {
             const def = this.pendingReceipts.shift();
             if (!def) {
@@ -391,14 +381,14 @@ export class ExecutionHouseScene extends Phaser.Scene {
             registered: false,
             available: !thrown,
             x,
-            y,
-            prompt: 'Space: 영수증 줍기',
-            onInteract: () => this.collectReceipt(receipt),
-            setInteractionFocus: (focused) => {
-                receipt.body?.setStrokeStyle(2, color, focused ? 1 : 0.45);
-                receipt.body?.setFillStyle(0xf5f1e7, focused ? 1 : 0.94);
-                receipt.fold?.setAlpha(focused ? 1 : 0.82);
-            },
+              y,
+              prompt: 'Space: 영수증 줍기',
+              onInteract: () => this.collectReceipt(receipt),
+              setInteractionFocus: (focused) => {
+                  receipt.body?.setAlpha(focused ? 1 : 0.92);
+                  receipt.body?.setTint?.(focused ? 0xffffff : 0xf6f1e7);
+                  receipt.fold?.setAlpha(focused ? 1 : 0.82);
+                },
             update: () => {
                 if (receipt.container) {
                     receipt.x = receipt.container.x;
@@ -408,19 +398,29 @@ export class ExecutionHouseScene extends Phaser.Scene {
             destroy: () => receipt.container?.destroy(true)
         };
 
-        const container = this.add.container(x, y).setDepth(thrown ? 5.5 : 5);
-        const shadow = this.add.ellipse(0, 26, 84, 14, 0x000000, 0.28).setScale(1, 0.8);
-        const body = this.add.rectangle(0, 0, 132, 52, 0xf5f1e7, 0.97).setStrokeStyle(2, color, 0.52);
-        const fold = this.add.triangle(48, -20, 0, 0, 12, 0, 12, 12, 0xfdfbf2, 0.95)
-            .setStrokeStyle(1, 0xd7d0c4, 0.45);
-        const line1 = this.add.rectangle(-12, -8, 58, 3, 0xc9c4b8, 0.7);
-        const line2 = this.add.rectangle(-10, 2, 48, 3, 0xc9c4b8, 0.54);
-        const line3 = this.add.rectangle(-16, 12, 66, 3, 0xc9c4b8, 0.48);
-        const stamp = this.add.rectangle(38, 10, 18, 12, color, 0.75);
-        container.add([shadow, body, fold, line1, line2, line3, stamp]);
+        const container = this.add.container(x, y).setDepth(thrown ? 6.5 : 6);
+        const shadow = this.add.ellipse(0, 34, 74, 16, 0x000000, 0.26).setScale(1, 0.8);
+        let body;
+        if (hasTexture(this, ASSETS.objects.receipt.key)) {
+            body = this.add.image(0, 0, ASSETS.objects.receipt.key).setDisplaySize(58, 58).setOrigin(0.5);
+            container.add([shadow, body]);
+        } else {
+            body = this.add.rectangle(0, 0, 58, 58, 0xf5f1e7, 0.97).setStrokeStyle(2, color, 0.52);
+            const fold = this.add.triangle(48, -20, 0, 0, 12, 0, 12, 12, 0xfdfbf2, 0.95)
+                .setStrokeStyle(1, 0xd7d0c4, 0.45);
+            const line1 = this.add.rectangle(-12, -8, 58, 3, 0xc9c4b8, 0.7);
+            const line2 = this.add.rectangle(-10, 2, 48, 3, 0xc9c4b8, 0.54);
+            const line3 = this.add.rectangle(-16, 12, 66, 3, 0xc9c4b8, 0.48);
+            const stamp = this.add.rectangle(38, 10, 18, 12, color, 0.75);
+            container.add([shadow, body, fold, line1, line2, line3, stamp]);
+            receipt.fold = fold;
+        }
+        if (body?.setTint) {
+            body.setTint(0xffffff);
+        }
         receipt.container = container;
         receipt.body = body;
-        receipt.fold = fold;
+        receipt.fold = receipt.fold || null;
         receipt.shadow = shadow;
         receipt.color = color;
 
@@ -658,9 +658,16 @@ export class ExecutionHouseScene extends Phaser.Scene {
     }
 
     rejectReceipt(_receipt, message) {
-        GameState.decreaseHp(1);
+        GameState.decreaseHp(8);
+        if ((GameState.get('hp') ?? 0) <= 0) {
+            this.showToast('반려되었습니다. HP 0', 0xff6b7d);
+            this.time.delayedCall(100, () => {
+                this.scene.start('GameOverScene');
+            });
+            return;
+        }
         this.showAssistantBark(message, 2200);
-        this.showToast('반려되었습니다. HP -1', 0xff6b7d);
+        this.showToast('반려되었습니다. HP -1/4', 0xff6b7d);
         this.refreshHud();
     }
 
@@ -914,7 +921,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
     refreshHud() {
         this.topHud.refresh();
         this.bottomHud.refresh();
-        this.refreshTimerText();
         this.refreshReceiptPanel();
     }
 }

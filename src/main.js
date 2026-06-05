@@ -5,6 +5,8 @@ import { OpeningScene } from './scenes/OpeningScene.js';
 import { SealedVaultScene } from './scenes/SealedVaultScene.js';
 import { DocumentCheckMiniGameScene } from './scenes/DocumentCheckMiniGameScene.js';
 import { StageClearScene } from './scenes/StageClearScene.js';
+import { ExecutionHouseScene } from './scenes/ExecutionHouseScene.js';
+import { GameOverScene } from './scenes/GameOverScene.js';
 import { GAME_HEIGHT, GAME_WIDTH } from './config/gameDimensions.js';
 
 const config = {
@@ -32,7 +34,9 @@ const config = {
         OpeningScene,
         SealedVaultScene,
         DocumentCheckMiniGameScene,
-        StageClearScene
+        StageClearScene,
+        ExecutionHouseScene,
+        GameOverScene
     ]
 };
 

@@ -12,8 +12,8 @@ export const chapter1Data = {
             prompt: 'Space: KCA 간사와 대화',
             x: 600,
             y: 460,
-            width: 92,
-            height: 118,
+            width: 98,
+            height: 135,
             color: 0xff4f86,
             animated: true
         },

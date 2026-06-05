@@ -21,6 +21,9 @@ export class InteractionManager {
         let closest = null;
         let closestDistance = Number.MAX_SAFE_INTEGER;
         this.interactables.forEach((item) => {
+            if (item?.available === false) {
+                return;
+            }
             const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, item.x, item.y);
             if (distance < this.range && distance < closestDistance) {
                 closest = item;

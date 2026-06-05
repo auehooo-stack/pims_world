@@ -23,6 +23,18 @@ export const initialGameState = {
     sealedVaultOpened: false,
     stage1Cleared: false,
     businessCostCoin: false,
+    stage2BriefingDone: false,
+    stage2Phase: 'briefing',
+    stage2CollectedCount: 0,
+    stage2SortedCount: 0,
+    stage2ReceiptTarget: 10,
+    stage2CurrentReceiptLabel: '',
+    stage2CurrentReceiptCategory: '',
+    stage2PendingAssetRegistration: false,
+    stage2InventoryItems: [],
+    stage2TimerRemaining: 15,
+    stage2Cleared: false,
+    stage2Failed: false,
     savedPlayerPosition: null
 };
 
@@ -30,7 +42,8 @@ const cloneInitialState = () => ({
     ...initialGameState,
     startDate: cloneDate(initialGameState.startDate),
     currentDate: cloneDate(initialGameState.currentDate),
-    endDate: cloneDate(initialGameState.endDate)
+    endDate: cloneDate(initialGameState.endDate),
+    stage2InventoryItems: [...initialGameState.stage2InventoryItems]
 });
 
 export const GameState = {
@@ -49,6 +62,29 @@ export const GameState = {
     },
 
     getCurrentObjective() {
+        if (this.get('currentChapter') === 2) {
+            if (this.get('stage2Cleared')) {
+                return '집행의 집 정리를 마쳤습니다.';
+            }
+            if (this.get('stage2Failed')) {
+                return '집행의 집 영수증 분류가 끝났습니다.';
+            }
+            const phase = this.get('stage2Phase');
+            if (phase === 'briefing' || !this.get('stage2BriefingDone')) {
+                return 'KCA 간사의 설명을 듣고 집행의 집 규칙을 확인하세요.';
+            }
+            if (phase === 'collect') {
+                return '영수증 조각을 모두 모으세요.';
+            }
+            if (this.get('stage2PendingAssetRegistration')) {
+                return '자산취득비 영수증을 PIMS에 먼저 등록하세요.';
+            }
+
+            const sorted = this.get('stage2SortedCount') || 0;
+            const target = this.get('stage2ReceiptTarget') || 10;
+            return `영수증을 바구니에 분류하세요. (${sorted}/${target})`;
+        }
+
         if (this.get('miniGameCleared')) {
             return '봉인된 금고 문을 확인하세요.';
         }

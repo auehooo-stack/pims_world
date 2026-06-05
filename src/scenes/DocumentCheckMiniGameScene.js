@@ -454,8 +454,14 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     }
 
     applyWrongAnswer(message, resetInput = false) {
-        GameState.decreaseHp(10);
+        GameState.decreaseHp(8);
         this.hpText.setText(`HP ${GameState.get('hp') ?? 0}`);
+        if ((GameState.get('hp') ?? 0) <= 0) {
+            this.time.delayedCall(100, () => {
+                this.scene.start('GameOverScene');
+            });
+            return;
+        }
 
         if (resetInput) {
             this.currentInput = '';
