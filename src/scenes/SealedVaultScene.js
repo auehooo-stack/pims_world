@@ -22,7 +22,6 @@ export class SealedVaultScene extends Phaser.Scene {
         this.drawBackground();
         this.createHud();
         this.dialogue = new DialogueManager(this, {
-            showBackdrop: false,
             layout: this.bottomHud.getDialogLayout()
         });
 

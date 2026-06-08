@@ -22,8 +22,8 @@ export class DialogBox {
         this.choiceNodes = [];
         this.choiceBounds = [];
         this.layout = {
-            panelX: 0,
-            panelWidth: 722,
+            panelX: 16,
+            panelWidth: 764,
             x: 34,
             y: DIALOG_TOP + 17,
             bodyWidth: 526,
@@ -32,12 +32,13 @@ export class DialogBox {
             hintX: 688,
             hintY: GAME_HEIGHT - 38,
             speakerBoxX: 152,
-            speakerBoxY: DIALOG_TOP + 18,
-            speakerBoxWidth: 220,
+            speakerBoxY: DIALOG_TOP + 34,
+            speakerBoxWidth: 147,
             speakerBoxHeight: 30,
-            portraitX: 28,
-            portraitY: DIALOG_TOP + 52,
-            portraitSize: 112,
+            portraitX: 30,
+            portraitY: DIALOG_TOP + 26,
+            portraitWidth: 105,
+            portraitHeight: 120,
             ...options.layout
         };
 
@@ -45,7 +46,7 @@ export class DialogBox {
         if (options.showBackdrop !== false) {
             if (hasTexture(scene, ASSETS.ui.dialogPanel.key)) {
                 this.backdrop = scene.add.image(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, ASSETS.ui.dialogPanel.key)
-                    .setDisplaySize(this.layout.panelWidth, DIALOG_HEIGHT);
+                    .setDisplaySize(this.layout.panelWidth, DIALOG_HEIGHT - 18);
             } else {
                 this.backdrop = scene.add.rectangle(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, this.layout.panelWidth, DIALOG_HEIGHT, 0x05050a, 0.88)
                     .setStrokeStyle(2, 0x765dff, 0.8);
@@ -53,14 +54,22 @@ export class DialogBox {
             this.container.add(this.backdrop);
         }
 
-        this.speakerBox = scene.add.rectangle(this.layout.speakerBoxX, this.layout.speakerBoxY, this.layout.speakerBoxWidth, this.layout.speakerBoxHeight, 0x17132a, 0.94)
-            .setOrigin(0, 0)
-            .setStrokeStyle(2, 0x9d5dd6, 0.72);
-        this.portraitFrame = scene.add.rectangle(this.layout.portraitX, this.layout.portraitY, this.layout.portraitSize, this.layout.portraitSize, 0x0b0c18, 0.92)
-            .setOrigin(0, 0)
-            .setStrokeStyle(2, 0x2be8ff, 0.42);
-        this.portraitImage = scene.add.image(this.layout.portraitX + this.layout.portraitSize / 2, this.layout.portraitY + this.layout.portraitSize / 2, ASSETS.characters.kcaAssistantIdle.key)
-            .setDisplaySize(this.layout.portraitSize - 12, this.layout.portraitSize - 12)
+        this.speakerBox = hasTexture(scene, ASSETS.ui.dialogSpeakerBox.key)
+            ? scene.add.image(this.layout.speakerBoxX, this.layout.speakerBoxY, ASSETS.ui.dialogSpeakerBox.key)
+                .setOrigin(0, 0)
+                .setDisplaySize(this.layout.speakerBoxWidth, this.layout.speakerBoxHeight)
+            : scene.add.rectangle(this.layout.speakerBoxX, this.layout.speakerBoxY, this.layout.speakerBoxWidth, this.layout.speakerBoxHeight, 0x17132a, 0.94)
+                .setOrigin(0, 0)
+                .setStrokeStyle(2, 0x9d5dd6, 0.72);
+        this.portraitFrame = hasTexture(scene, ASSETS.ui.dialogPortraitFrame.key)
+            ? scene.add.image(this.layout.portraitX, this.layout.portraitY, ASSETS.ui.dialogPortraitFrame.key)
+                .setOrigin(0, 0)
+                .setDisplaySize(this.layout.portraitWidth, this.layout.portraitHeight)
+            : scene.add.rectangle(this.layout.portraitX, this.layout.portraitY, this.layout.portraitWidth, this.layout.portraitHeight, 0x0b0c18, 0.92)
+                .setOrigin(0, 0)
+                .setStrokeStyle(2, 0x2be8ff, 0.42);
+        this.portraitImage = scene.add.image(this.layout.portraitX + this.layout.portraitWidth / 2, this.layout.portraitY + this.layout.portraitHeight / 2, ASSETS.characters.kcaAssistantIdle.key)
+            .setDisplaySize(this.layout.portraitWidth - 12, this.layout.portraitHeight - 12)
             .setOrigin(0.5);
 
         this.speakerText = scene.add.text(this.layout.speakerBoxX + 14, this.layout.speakerBoxY + this.layout.speakerBoxHeight / 2, '', {
@@ -77,6 +86,10 @@ export class DialogBox {
             fontSize: '12px',
             color: '#9aa0c8'
         }).setOrigin(1, 0.5);
+        this.nextIndicator = scene.add.image(this.layout.panelX + this.layout.panelWidth - 24, DIALOG_TOP + DIALOG_HEIGHT - 23, ASSETS.ui.dialogNextIndicator.key)
+            .setDisplaySize(16, 12)
+            .setOrigin(0.5)
+            .setVisible(false);
 
         this.advanceArea = scene.add.rectangle(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, this.layout.panelWidth, DIALOG_HEIGHT, 0x000000, 0.001)
             .setInteractive({ useHandCursor: true });
@@ -86,7 +99,7 @@ export class DialogBox {
             this.advance();
         });
 
-        this.container.add([this.advanceArea, this.speakerBox, this.portraitFrame, this.portraitImage, this.speakerText, this.bodyText, this.hintText]);
+        this.container.add([this.advanceArea, this.speakerBox, this.portraitFrame, this.portraitImage, this.speakerText, this.bodyText, this.hintText, this.nextIndicator]);
         this.keydownHandler = (event) => this.handleKeydown(event);
         this.scenePointerHandler = (pointer) => this.handlePointerDown(pointer);
         scene.input.keyboard.addCapture([
@@ -124,6 +137,7 @@ export class DialogBox {
         this.container.setVisible(true);
         this.advanceArea.disableInteractive();
         this.advanceArea.setVisible(false);
+        this.setNextIndicatorVisible(false);
         this.updateSpeakerVisuals(speaker);
         this.bodyText.setText(text);
         this.hintText.setText('1/2 or Click');
@@ -206,6 +220,7 @@ export class DialogBox {
         this.updateSpeakerVisuals(line.speaker);
         this.bodyText.setText(line.text || '');
         this.hintText.setText('Click / Space / Enter');
+        this.setNextIndicatorVisible(this.lineIndex < this.lines.length - 1);
     }
 
     advance() {
@@ -283,6 +298,7 @@ export class DialogBox {
         this.lines = [];
         this.lineIndex = 0;
         this.clearChoices();
+        this.setNextIndicatorVisible(false);
         this.container.setVisible(false);
         this.advanceArea.setVisible(true);
         this.advanceArea.setInteractive({ useHandCursor: true });
@@ -302,7 +318,13 @@ export class DialogBox {
     getPortraitKey(speaker) {
         const name = String(speaker || '');
         if (name.includes('김대리')) {
+            if (hasTexture(this.scene, ASSETS.ui.dialogPortraitKimDaeri.key)) {
+                return ASSETS.ui.dialogPortraitKimDaeri.key;
+            }
             return ASSETS.characters.kimDaeriIdle.key;
+        }
+        if (hasTexture(this.scene, ASSETS.ui.dialogPortraitKcaAssistant.key)) {
+            return ASSETS.ui.dialogPortraitKcaAssistant.key;
         }
         return ASSETS.characters.kcaAssistantIdle.key;
     }
@@ -314,6 +336,12 @@ export class DialogBox {
             this.portraitImage.setVisible(true);
         }
         this.speakerText?.setText(speaker || '');
+    }
+
+    setNextIndicatorVisible(visible) {
+        if (this.nextIndicator) {
+            this.nextIndicator.setVisible(Boolean(visible));
+        }
     }
 
     destroy() {

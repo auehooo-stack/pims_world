@@ -1,11 +1,16 @@
-﻿import { BOTTOM_HUD_HEIGHT, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
+﻿import { BOTTOM_HUD_HEIGHT, DIALOG_HEIGHT, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 import { ASSETS, getInventoryIconKey, hasTexture } from '../systems/AssetManager.js';
 import { GameState } from '../systems/GameState.js';
 
 const PANEL_TOP = GAME_HEIGHT - BOTTOM_HUD_HEIGHT;
-const LEFT_PANEL_WIDTH = 722;
-const RIGHT_PANEL_X = LEFT_PANEL_WIDTH + 16;
+const LEFT_PANEL_WIDTH = 780;
+const RIGHT_PANEL_X = LEFT_PANEL_WIDTH + 2;
 const RIGHT_PANEL_WIDTH = GAME_WIDTH - RIGHT_PANEL_X - 16;
+const INVENTORY_SLOT_WIDTH = 68;
+const INVENTORY_SLOT_HEIGHT = 90;
+const INVENTORY_SLOT_GAP = 8;
+const INVENTORY_SLOT_START_Y = PANEL_TOP + 62;
+const INVENTORY_ICON_SIZE = 54;
 
 export class BottomHUD {
     constructor(scene) {
@@ -13,6 +18,8 @@ export class BottomHUD {
         this.inventorySlotTexts = [];
         this.inventorySlotShapes = [];
         this.inventorySlotIcons = [];
+        this.inventorySlotBadges = [];
+        this.inventorySlotBadgeTexts = [];
 
         this.container = scene.add.container(0, 0).setDepth(900);
         this.drawPanel();
@@ -24,33 +31,23 @@ export class BottomHUD {
 
     drawPanel() {
         const g = this.scene.add.graphics();
-        g.fillStyle(0x05050a, 0.14).fillRect(0, PANEL_TOP, GAME_WIDTH, BOTTOM_HUD_HEIGHT);
-        g.fillStyle(0x0d1020, 0.18).fillRect(16, PANEL_TOP + 16, LEFT_PANEL_WIDTH - 16, BOTTOM_HUD_HEIGHT - 32);
-        g.fillStyle(0x10121d, 0.12).fillRect(RIGHT_PANEL_X, PANEL_TOP + 16, RIGHT_PANEL_WIDTH, BOTTOM_HUD_HEIGHT - 32);
-        g.lineStyle(1, 0x2be8ff, 0.16);
+        g.lineStyle(1, 0x2be8ff, 0.12);
         g.lineBetween(LEFT_PANEL_WIDTH, PANEL_TOP + 16, LEFT_PANEL_WIDTH, GAME_HEIGHT - 16);
         this.container.add(g);
 
         if (hasTexture(this.scene, ASSETS.ui.inventoryPanel.key)) {
             this.container.add(this.scene.add.image(RIGHT_PANEL_X + RIGHT_PANEL_WIDTH / 2, PANEL_TOP + BOTTOM_HUD_HEIGHT / 2, ASSETS.ui.inventoryPanel.key)
-                .setDisplaySize(RIGHT_PANEL_WIDTH, BOTTOM_HUD_HEIGHT)
+                .setDisplaySize(RIGHT_PANEL_WIDTH, BOTTOM_HUD_HEIGHT - 18)
                 .setAlpha(0.82));
         }
     }
 
     createInventory() {
-        this.inventoryTitle = this.scene.add.text(RIGHT_PANEL_X + 18, PANEL_TOP + 18, 'INVENTORY', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '14px',
-            color: '#ffd36e'
-        });
-        this.container.add(this.inventoryTitle);
-
         const startX = RIGHT_PANEL_X + 18;
-        const startY = PANEL_TOP + 42;
-        const slotWidth = 64;
-        const slotHeight = 64;
-        const gap = 7;
+        const startY = INVENTORY_SLOT_START_Y;
+        const slotWidth = INVENTORY_SLOT_WIDTH;
+        const slotHeight = INVENTORY_SLOT_HEIGHT;
+        const gap = INVENTORY_SLOT_GAP;
 
         for (let col = 0; col < 6; col += 1) {
             const x = startX + col * (slotWidth + gap);
@@ -61,92 +58,170 @@ export class BottomHUD {
                     .setDisplaySize(slotWidth, slotHeight)
                     .setOrigin(0.5);
             } else {
-                slotShape = this.scene.add.rectangle(x, y, slotWidth, slotHeight, 0x10121d, 0.92)
-                    .setOrigin(0)
-                    .setStrokeStyle(2, 0x8d7cff, 0.58);
+                slotShape = this.scene.add.rectangle(x, y, slotWidth, slotHeight, 0x000000, 0.0)
+                    .setOrigin(0);
             }
 
             const icon = null;
-            const text = this.scene.add.text(x + slotWidth / 2, y + slotHeight / 2, '', {
+            const nameText = this.scene.add.text(x + slotWidth / 2, y + slotHeight / 2, '', {
                 fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '8px',
+                fontSize: '9px',
                 color: '#f8f3ff',
                 align: 'center',
                 wordWrap: { width: slotWidth - 6 }
             }).setOrigin(0.5);
+            const badge = this.scene.add.graphics().setVisible(false);
+            const badgeText = this.scene.add.text(0, 0, '', {
+                fontFamily: 'GALMURI, Arial, sans-serif',
+                fontSize: '10px',
+                color: '#f8f3ff',
+                align: 'center'
+            }).setOrigin(0.5).setVisible(false);
 
             this.inventorySlotShapes.push(slotShape);
             this.inventorySlotIcons.push(icon);
-            this.inventorySlotTexts.push(text);
-            this.container.add([slotShape, text]);
+            this.inventorySlotTexts.push(nameText);
+            this.inventorySlotBadges.push(badge);
+            this.inventorySlotBadgeTexts.push(badgeText);
+            this.container.add([slotShape, badge, badgeText, nameText]);
         }
     }
 
     createInteractionPrompt() {
-        this.interactionPanel = this.scene.add.rectangle(26, PANEL_TOP + 18, LEFT_PANEL_WIDTH - 34, 134, 0x07111f, 0.08)
-            .setOrigin(0, 0)
-            .setStrokeStyle(1, 0x2be8ff, 0.14);
+        const layout = this.getDialogLayout();
+        const panelX = layout.panelX;
+        const panelY = PANEL_TOP + 9;
+        const panelWidth = layout.panelWidth;
+        const panelHeight = DIALOG_HEIGHT - 18;
+        const speakerBoxWidth = layout.speakerBoxWidth;
+        const speakerBoxHeight = layout.speakerBoxHeight;
+        const speakerBoxX = layout.speakerBoxX;
+        const speakerBoxY = layout.speakerBoxY;
+        const portraitX = layout.portraitX;
+        const portraitY = layout.portraitY;
+        const portraitWidth = layout.portraitWidth;
+        const portraitHeight = layout.portraitHeight;
+
+        if (hasTexture(this.scene, ASSETS.ui.dialogPanel.key)) {
+            this.interactionPanel = this.scene.add.image(panelX + panelWidth / 2, panelY + panelHeight / 2, ASSETS.ui.dialogPanel.key)
+                .setDisplaySize(panelWidth, panelHeight)
+                .setOrigin(0.5)
+                .setAlpha(0.96);
+        } else {
+            this.interactionPanel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.08)
+                .setOrigin(0, 0)
+                .setStrokeStyle(1, 0x2be8ff, 0.14);
+        }
         this.container.add(this.interactionPanel);
 
-        this.interactionPrompt = this.scene.add.text(42, PANEL_TOP + 24, '', {
+        this.interactionPortraitFrame = hasTexture(this.scene, ASSETS.ui.dialogPortraitFrame.key)
+            ? this.scene.add.image(portraitX, portraitY, ASSETS.ui.dialogPortraitFrame.key)
+                .setOrigin(0, 0)
+                .setDisplaySize(portraitWidth, portraitHeight)
+            : this.scene.add.rectangle(portraitX, portraitY, portraitWidth, portraitHeight, 0x0b0c18, 0.92)
+                .setOrigin(0, 0)
+                .setStrokeStyle(2, 0x2be8ff, 0.42);
+
+        this.interactionSpeakerBox = hasTexture(this.scene, ASSETS.ui.dialogSpeakerBox.key)
+            ? this.scene.add.image(speakerBoxX, speakerBoxY, ASSETS.ui.dialogSpeakerBox.key)
+                .setOrigin(0, 0)
+                .setDisplaySize(speakerBoxWidth, speakerBoxHeight)
+            : this.scene.add.rectangle(speakerBoxX, speakerBoxY, speakerBoxWidth, speakerBoxHeight, 0x17132a, 0.94)
+                .setOrigin(0, 0)
+                .setStrokeStyle(2, 0x9d5dd6, 0.72);
+
+        this.interactionSpeakerText = this.scene.add.text(speakerBoxX + 14, speakerBoxY + speakerBoxHeight / 2, 'PIMS WORLD', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '14px',
+            color: '#ffd36e'
+        }).setOrigin(0, 0.5);
+
+        this.interactionPrompt = this.scene.add.text(layout.x, speakerBoxY + speakerBoxHeight + 14, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef',
-            wordWrap: { width: LEFT_PANEL_WIDTH - 80 }
+            wordWrap: { width: layout.bodyWidth }
         });
-        this.container.add(this.interactionPrompt);
+
+        this.container.add([this.interactionPortraitFrame, this.interactionSpeakerBox, this.interactionSpeakerText, this.interactionPrompt]);
     }
 
     getDialogLayout() {
         return {
-            panelX: 0,
-            panelWidth: LEFT_PANEL_WIDTH,
+            panelX: 16,
+            panelWidth: 764,
             x: 34,
             y: PANEL_TOP + 17,
             bodyWidth: 526,
             choiceX: 46,
             choiceY: PANEL_TOP + 82,
-            hintX: LEFT_PANEL_WIDTH - 34,
+            hintX: 688,
             hintY: PANEL_TOP + 20,
             speakerBoxX: 152,
-            speakerBoxY: PANEL_TOP + 18,
-            speakerBoxWidth: 220,
+            speakerBoxY: PANEL_TOP + 34,
+            speakerBoxWidth: 147,
             speakerBoxHeight: 30,
-            portraitX: 28,
-            portraitY: PANEL_TOP + 52,
-            portraitSize: 112
+            portraitX: 30,
+            portraitY: PANEL_TOP + 26,
+            portraitWidth: 105,
+            portraitHeight: 120
         };
     }
 
     refresh() {
         this.refreshInventory();
+        this.refreshInteractionPrompt();
     }
 
     setInteractionPrompt(prompt) {
-        this.interactionPrompt?.setText(prompt || '');
-        this.interactionPrompt?.setVisible(Boolean(prompt));
+        this.lastInteractionPrompt = prompt || '';
+        this.refreshInteractionPrompt();
+    }
+
+    refreshInteractionPrompt() {
+        const prompt = String(this.lastInteractionPrompt || '').trim();
+        const hasPrompt = Boolean(prompt);
+        const objectiveText = `현재 목표: ${GameState.getCurrentObjective()}`;
+
+        this.interactionPortraitFrame?.setVisible(true);
+        this.interactionSpeakerBox?.setVisible(true);
+        this.interactionSpeakerText?.setVisible(true);
+        this.interactionSpeakerText?.setText('PIMS WORLD');
+        this.interactionPrompt?.setPosition(164, PANEL_TOP + 68);
+        this.interactionPrompt?.setFontSize('16px');
+        this.interactionPrompt?.setVisible(true);
+
+        if (hasPrompt) {
+            this.interactionPrompt?.setColor('#c9ffef');
+            this.interactionPrompt?.setText(prompt);
+            return;
+        }
+
+        this.interactionPrompt?.setColor('#fff5c7');
+        this.interactionPrompt?.setText(objectiveText);
     }
 
     refreshInventory() {
         let items = [
-            { id: 'guidelineBook', label: '지침서', color: 0x75f6ff },
-            { id: 'ndaDocument', label: `보안서약서 ${GameState.get('currentNdaCount')}/${GameState.get('requiredNdaCount')}`, color: 0xffd36e }
+            { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 },
+            { id: 'ndaDocument', label: '보안서약서', color: 0xffd36e, count: GameState.get('currentNdaCount') }
         ];
 
         if (GameState.get('currentChapter') === 2) {
             items = [
-                { id: 'guidelineBook', label: '지침서', color: 0x75f6ff },
+                { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 },
                 {
                     id: 'stage2Receipts',
-                    label: `영수증 ${GameState.get('stage2CollectedCount') || 0}개`,
+                    label: '영수증',
                     color: 0xffd36e,
-                    fontSize: '9px'
+                    fontSize: '9px',
+                    count: GameState.get('stage2CollectedCount') || 0
                 }
             ];
         } else {
             // TODO: add the budget coin item to inventory when stage 1 clear rewards are wired in.
             if (GameState.get('businessCostCoin')) {
-                items.push({ id: 'budgetCoin', label: '사업비 코인', color: 0xffd36e });
+                items.push({ id: 'budgetCoin', label: '사업비 코인', color: 0xffd36e, count: 1 });
             }
         }
 
@@ -154,8 +229,6 @@ export class BottomHUD {
         const visibleItems = items.length > slotCount
             ? [...items.slice(0, slotCount - 1), { id: 'inventoryOverflow', label: `+${items.length - (slotCount - 1)}`, color: 0x8bd6ff, fontSize: '10px' }]
             : items;
-
-        this.inventoryTitle?.setText('INVENTORY');
 
         this.inventorySlotTexts.forEach((text, index) => {
             const item = visibleItems[index];
@@ -166,11 +239,13 @@ export class BottomHUD {
             } else if (GameState.get('currentChapter') === 2) {
                 text.setFontSize('9px');
             }
-            const iconSize = item?.id === 'budgetCoin' ? 60 : (item?.id === 'ndaDocument' ? 41 : (item?.id === 'stage2Receipts' ? 40 : 43));
+            const iconSize = INVENTORY_ICON_SIZE;
             const isGuideline = item?.id === 'guidelineBook';
-            const iconY = this.inventorySlotShapes[index].y + (isGuideline ? 16 : 18);
-            const textGap = isGuideline ? 3 : (item?.id === 'stage2Receipts' ? 2 : 5);
-            const textY = iconY + (iconSize / 2) + textGap + 4;
+            const iconCenterX = this.inventorySlotShapes[index].x + (INVENTORY_SLOT_WIDTH / 2);
+            const iconY = this.inventorySlotShapes[index].y + (isGuideline ? 25 : 27);
+            const textGap = isGuideline ? 2 : (item?.id === 'stage2Receipts' ? 2 : 4);
+            const textY = iconY + (iconSize / 2) + textGap + 8;
+            const badgeCount = item?.count;
 
             if (iconKey && hasTexture(this.scene, iconKey)) {
                 if (!this.inventorySlotIcons[index]) {
@@ -181,22 +256,47 @@ export class BottomHUD {
                 } else {
                     this.inventorySlotIcons[index].setTexture(iconKey).setVisible(true).setDisplaySize(iconSize, iconSize);
                 }
-                this.inventorySlotIcons[index].setPosition(this.inventorySlotShapes[index].x + 40, iconY);
-                text.setPosition(this.inventorySlotShapes[index].x + 40, textY);
+                this.inventorySlotIcons[index].setPosition(iconCenterX, iconY);
+                text.setPosition(iconCenterX, textY);
             } else {
                 this.inventorySlotIcons[index]?.setVisible(false);
-                text.setPosition(this.inventorySlotShapes[index].x + 40, this.inventorySlotShapes[index].y + (isGuideline ? 44 : 49));
+                text.setPosition(iconCenterX, this.inventorySlotShapes[index].y + (isGuideline ? 52 : 58));
             }
 
-            if (this.inventorySlotShapes[index].setFillStyle) {
-                this.inventorySlotShapes[index].setFillStyle(item ? item.color : 0x10121d, item ? 0.22 : 0.92);
+            const badge = this.inventorySlotBadges[index];
+            const badgeText = this.inventorySlotBadgeTexts[index];
+            if (badge && badgeText) {
+                if (badgeCount !== undefined && badgeCount !== null && badgeCount !== '') {
+                    const badgeRadius = 12;
+                    const badgeCenterX = this.inventorySlotShapes[index].x + INVENTORY_SLOT_WIDTH - 12;
+                    const badgeCenterY = this.inventorySlotShapes[index].y + INVENTORY_SLOT_HEIGHT - 12;
+                    badge.clear();
+                    badge.fillStyle(0x000000, 0.9);
+                    badge.fillCircle(badgeCenterX, badgeCenterY, badgeRadius);
+                    badgeText.setText(String(badgeCount));
+                    badgeText.setPosition(badgeCenterX, badgeCenterY + 0.5);
+                    badgeText.setVisible(true);
+                    badge.setVisible(true);
+                } else {
+                    badge.clear();
+                    badge.setVisible(false);
+                    badgeText.setVisible(false);
+                }
             }
         });
     }
 
     destroy() {
         this.interactionPrompt?.destroy();
+        this.interactionPortraitFrame?.destroy();
+        this.interactionSpeakerBox?.destroy();
+        this.interactionSpeakerText?.destroy();
         this.container?.destroy(true);
     }
 }
+
+
+
+
+
 

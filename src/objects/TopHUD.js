@@ -76,7 +76,7 @@ export class TopHUD {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff5c7'
-        }).setAlpha(0.9);
+        }).setAlpha(0).setVisible(false);
 
         this.container.add(this.objectiveText);
     }
@@ -256,10 +256,11 @@ export class TopHUD {
         this.dateMetric?.valueText?.setText(GameState.formatCurrentDate());
         this.updateHeartDisplay();
         this.executionMetric?.valueText?.setText(this.getExecutionDisplay());
-        this.objectiveText?.setText('현재 목표: ' + GameState.getCurrentObjective());
+        this.objectiveText?.setText('');
     }
 
     destroy() {
         this.container?.destroy(true);
     }
 }
+

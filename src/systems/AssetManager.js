@@ -29,6 +29,7 @@ export const ASSETS = {
         sealedVaultFar: image('bg_sealed_vault_far', '/assets/backgrounds/sealed_vault_far.png'),
         sealedVaultMid: image('bg_sealed_vault_mid', '/assets/backgrounds/sealed_vault_mid.png'),
         sealedVaultFront: image('bg_sealed_vault_front', '/assets/backgrounds/sealed_vault_front.png'),
+        executionHouse: image('bg_execution_house', '/assets/backgrounds/execution_house_bg.png'),
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
         documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
@@ -55,18 +56,24 @@ export const ASSETS = {
         receipt: image('obj_receipt', '/assets/objects/receipt.png')
     },
     ui: {
-        dialogPanel: image('ui_dialog_panel', '/assets/ui/dialog_panel.png'),
+        dialogPanel: image('ui_dialog_panel', '/assets/ui/dialog/dialog_panel.png'),
+        dialogSpeakerBox: image('ui_dialog_speaker_box', '/assets/ui/dialog/speakerBox.png'),
+        dialogPortraitFrame: image('ui_dialog_portrait_frame', '/assets/ui/dialog/portraitFrame.png'),
+        dialogPortraitKcaAssistant: image('ui_dialog_portrait_kca_assistant', '/assets/ui/dialog/characters/kca_assistant.png'),
+        dialogPortraitKimDaeri: image('ui_dialog_portrait_kim_daeri', '/assets/ui/dialog/characters/kim_daeri.png'),
         hudPanel: image('ui_hud_panel', '/assets/ui/hud_panel.png'),
         objectiveBar: image('ui_objective_bar', '/assets/ui/objective_bar.png'),
-        inventoryPanel: image('ui_inventory_panel', '/assets/ui/inventory_panel.png'),
-        inventorySlot: image('ui_inventory_slot', '/assets/ui/inventory_slot.png'),
+        interactionPanel: image('ui_interaction_panel', '/assets/ui/bottom/interaction_panel.png'),
+        inventoryPanel: image('ui_inventory_panel', '/assets/ui/bottom/inventory_panel.png'),
+        inventorySlot: image('ui_inventory_slot', '/assets/ui/bottom/inventory_slot.png'),
         stageBox: image('ui_top_stage_box', '/assets/ui/top/ui_top_stage_box.png'),
         dateBox: image('ui_top_date_box', '/assets/ui/top/date_box.png'),
         executionBox: image('ui_top_execution_box', '/assets/ui/top/execution_box.png'),
         hpBox: image('ui_top_hp_box', '/assets/ui/top/hp_box.png'),
         settingsButton: image('ui_top_settings_button', '/assets/ui/top/settings_button.png'),
         buttonNormal: image('ui_button_normal', '/assets/ui/button_normal.png'),
-        buttonHover: image('ui_button_hover', '/assets/ui/button_hover.png')
+        buttonHover: image('ui_button_hover', '/assets/ui/button_hover.png'),
+        dialogNextIndicator: image('ui_dialog_next_indicator', '/assets/ui/dialog/dialog_next_indicator.png')
     },
     opening: {
         warningBackground: image('ui_opening_warning_background', '/assets/opening/warning_background.png'),

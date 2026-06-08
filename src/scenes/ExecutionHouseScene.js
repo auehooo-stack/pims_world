@@ -72,7 +72,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.createWorld();
         this.createReceiptPanel();
         this.dialogue = new DialogueManager(this, {
-            showBackdrop: false,
             layout: this.bottomHud.getDialogLayout()
         });
 
@@ -118,7 +117,16 @@ export class ExecutionHouseScene extends Phaser.Scene {
     }
 
     drawBackground() {
+        if (hasTexture(this, ASSETS.backgrounds.executionHouse.key)) {
+            this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSETS.backgrounds.executionHouse.key)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setOrigin(0.5)
+                .setDepth(0);
+            return;
+        }
+
         const g = this.add.graphics();
+        g.setDepth(0);
         g.fillStyle(0x05070f, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         g.fillStyle(0x0b1120, 1).fillRect(0, 0, GAME_WIDTH, 140);
         g.fillStyle(0x111c30, 1).fillRect(0, 140, GAME_WIDTH, 240);
