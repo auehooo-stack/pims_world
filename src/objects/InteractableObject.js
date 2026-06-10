@@ -16,6 +16,7 @@ export class InteractableObject {
         this.assistantOpenTextureKey = this.isAssistant ? ASSETS.characters.kcaAssistantIdle.key : null;
         this.assistantClosedTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantClosed.key : null;
         this.hideVisuals = Boolean(config.hideVisuals);
+        this.imageAlpha = typeof config.imageAlpha === 'number' ? config.imageAlpha : 1;
         setLinearTextureFilter(scene, this.textureKey);
         if (this.assistantOpenTextureKey) {
             setLinearTextureFilter(scene, this.assistantOpenTextureKey);
@@ -25,7 +26,7 @@ export class InteractableObject {
         }
         this.assistantBlinkCall = null;
 
-        this.container = scene.add.container(config.x, config.y).setDepth(2);
+        this.container = scene.add.container(config.x, config.y).setDepth(2).setAngle(config.angle ?? 0);
         this.shadow = scene.add.ellipse(0, config.height / 2 - 2, config.width * (this.isVault ? 0.9 : 0.82), this.isVault ? 14 : 12, 0x000000, this.isVault ? 0.24 : 0.3)
             .setScale(1, 0.8)
             .setDepth(1);
@@ -63,6 +64,7 @@ export class InteractableObject {
         if (this.textureKey && hasTexture(scene, this.textureKey)) {
             this.image = scene.add.image(0, 0, this.textureKey);
             this.image.setDisplaySize(config.width, config.height);
+            this.image.setAlpha(this.imageAlpha);
             this.image.disableInteractive?.();
             this.body.setAlpha(0);
             this.container.add(this.image);

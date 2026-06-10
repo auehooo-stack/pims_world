@@ -226,7 +226,7 @@ export class SealedVaultScene extends Phaser.Scene {
         const farKey = ASSETS.backgrounds.sealedVaultFar.key;
         const midKey = ASSETS.backgrounds.sealedVaultMid.key;
         const legacyKey = ASSETS.backgrounds.sealedVault.key;
-        const bgY = GAME_HEIGHT / 2 - 26;
+        const bgY = GAME_HEIGHT / 2;
 
         if (hasTexture(this, farKey)) {
             this.add.image(CENTER_X, bgY, farKey)

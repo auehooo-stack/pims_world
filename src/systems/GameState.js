@@ -1,4 +1,4 @@
-const cloneDate = (date) => ({ ...date });
+﻿const cloneDate = (date) => ({ ...date });
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -35,6 +35,23 @@ export const initialGameState = {
     stage2TimerRemaining: 15,
     stage2Cleared: false,
     stage2Failed: false,
+    stage3BriefingDone: false,
+    stage3Phase: 'briefing',
+    stage3TimerRemaining: 15,
+    stage3CollectedCount: 0,
+    stage3ReportTarget: 3,
+    stage3HasPerformance: false,
+    stage3HasExecution: false,
+    stage3HasOfficialLetter: false,
+    stage3ReportCreated: false,
+    stage3ReportComplete: false,
+    stage3Submitted: false,
+    stage3SubmitEnabled: false,
+    stage3MissingItems: [],
+    stage3SelectedCardIds: [],
+    stage3RejectionCount: 0,
+    stage3Cleared: false,
+    stage3Failed: false,
     savedPlayerPosition: null
 };
 
@@ -43,6 +60,7 @@ const cloneInitialState = () => ({
     startDate: cloneDate(initialGameState.startDate),
     currentDate: cloneDate(initialGameState.currentDate),
     endDate: cloneDate(initialGameState.endDate),
+    stage3MissingItems: [...initialGameState.stage3MissingItems],
     stage2InventoryItems: [...initialGameState.stage2InventoryItems]
 });
 
@@ -62,27 +80,52 @@ export const GameState = {
     },
 
     getCurrentObjective() {
+        if (this.get('currentChapter') === 3) {
+            if (this.get('stage3Cleared')) {
+                return '중간 관람차 정리를 마쳤습니다.';
+            }
+            if (this.get('stage3Failed')) {
+                return '중간보고서 제출 기한을 넘겼습니다.';
+            }
+            if (!this.get('stage3BriefingDone')) {
+                return 'KCA 간사의 설명을 듣고 중간보고서를 준비하세요.';
+            }
+            if (!this.get('stage3ReportCreated')) {
+                return '보고서 작성천막에서 중간보고서를 작성하세요.';
+            }
+            if (!this.get('stage3ReportComplete')) {
+                return '필수 자료를 다시 골라 보고서를 완성하세요.';
+            }
+            return 'PIMS 전송함에 보고서를 제출하세요.';
+        }
+
         if (this.get('currentChapter') === 2) {
             if (this.get('stage2Cleared')) {
                 return '집행의 집 정리를 마쳤습니다.';
             }
             if (this.get('stage2Failed')) {
-                return '집행의 집 영수증 분류가 끝났습니다.';
+                return '집행의 집 처리 기한을 넘겼습니다.';
             }
             const phase = this.get('stage2Phase');
             if (phase === 'briefing' || !this.get('stage2BriefingDone')) {
-                return 'KCA 간사의 설명을 듣고 집행의 집 규칙을 확인하세요.';
+                return 'KCA 간사의 설명을 듣고 영수증 폭풍 규칙을 확인하세요.';
             }
-            if (phase === 'collect') {
-                return '영수증 조각을 모두 모으세요.';
+            if (phase === 'field') {
+                return '영수증 더미를 클릭해 집행 처리를 시작하세요.';
+            }
+            if (phase === 'receiptApproach') {
+                return '영수증 더미 앞으로 이동 중입니다.';
+            }
+            if (phase === 'classification') {
+                return '영수증 10건을 분류하세요.';
+            }
+            if (phase === 'pimsApproach') {
+                return 'PIMS 단말기로 이동 중입니다.';
             }
             if (this.get('stage2PendingAssetRegistration')) {
-                return '자산취득비 영수증을 PIMS에 먼저 등록하세요.';
+                return '자산취득비는 PIMS 자산등록을 먼저 하세요.';
             }
-
-            const sorted = this.get('stage2SortedCount') || 0;
-            const target = this.get('stage2ReceiptTarget') || 10;
-            return `영수증을 바구니에 분류하세요. (${sorted}/${target})`;
+            return 'PIMS 단말기에서 최종 등록을 완료하세요.';
         }
 
         if (this.get('miniGameCleared')) {
@@ -143,3 +186,6 @@ export const GameState = {
         return a.year === b.year && a.month === b.month && a.day === b.day;
     }
 };
+
+
+

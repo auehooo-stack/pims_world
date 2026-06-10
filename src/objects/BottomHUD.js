@@ -20,6 +20,7 @@ export class BottomHUD {
         this.inventorySlotIcons = [];
         this.inventorySlotBadges = [];
         this.inventorySlotBadgeTexts = [];
+        this.interactionVisible = true;
 
         this.container = scene.add.container(0, 0).setDepth(900);
         this.drawPanel();
@@ -31,8 +32,6 @@ export class BottomHUD {
 
     drawPanel() {
         const g = this.scene.add.graphics();
-        g.lineStyle(1, 0x2be8ff, 0.12);
-        g.lineBetween(LEFT_PANEL_WIDTH, PANEL_TOP + 16, LEFT_PANEL_WIDTH, GAME_HEIGHT - 16);
         this.container.add(g);
 
         if (hasTexture(this.scene, ASSETS.ui.inventoryPanel.key)) {
@@ -101,14 +100,15 @@ export class BottomHUD {
         const portraitY = layout.portraitY;
         const portraitWidth = layout.portraitWidth;
         const portraitHeight = layout.portraitHeight;
+        this.interactionGroup = this.scene.add.container(0, 0);
 
         if (hasTexture(this.scene, ASSETS.ui.dialogPanel.key)) {
             this.interactionPanel = this.scene.add.image(panelX + panelWidth / 2, panelY + panelHeight / 2, ASSETS.ui.dialogPanel.key)
                 .setDisplaySize(panelWidth, panelHeight)
                 .setOrigin(0.5)
-                .setAlpha(0.96);
+                .setAlpha(0.82);
         } else {
-            this.interactionPanel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.08)
+            this.interactionPanel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.82)
                 .setOrigin(0, 0)
                 .setStrokeStyle(1, 0x2be8ff, 0.14);
         }
@@ -121,6 +121,12 @@ export class BottomHUD {
             : this.scene.add.rectangle(portraitX, portraitY, portraitWidth, portraitHeight, 0x0b0c18, 0.92)
                 .setOrigin(0, 0)
                 .setStrokeStyle(2, 0x2be8ff, 0.42);
+
+        this.interactionPortraitImage = hasTexture(this.scene, ASSETS.ui.dialogPortraitPimsWorld.key)
+            ? this.scene.add.image(portraitX + portraitWidth / 2, portraitY + portraitHeight / 2, ASSETS.ui.dialogPortraitPimsWorld.key)
+                .setOrigin(0.5)
+                .setDisplaySize(portraitWidth - 12, portraitHeight - 12)
+            : null;
 
         this.interactionSpeakerBox = hasTexture(this.scene, ASSETS.ui.dialogSpeakerBox.key)
             ? this.scene.add.image(speakerBoxX, speakerBoxY, ASSETS.ui.dialogSpeakerBox.key)
@@ -143,7 +149,8 @@ export class BottomHUD {
             wordWrap: { width: layout.bodyWidth }
         });
 
-        this.container.add([this.interactionPortraitFrame, this.interactionSpeakerBox, this.interactionSpeakerText, this.interactionPrompt]);
+        this.interactionGroup.add([this.interactionPanel, this.interactionPortraitFrame, this.interactionPortraitImage, this.interactionSpeakerBox, this.interactionSpeakerText, this.interactionPrompt].filter(Boolean));
+        this.container.add(this.interactionGroup);
     }
 
     getDialogLayout() {
@@ -179,11 +186,25 @@ export class BottomHUD {
     }
 
     refreshInteractionPrompt() {
+        if (!this.interactionVisible) {
+            this.interactionGroup?.setVisible(false);
+            this.interactionPanel?.setVisible(false);
+            this.interactionPortraitFrame?.setVisible(false);
+            this.interactionPortraitImage?.setVisible(false);
+            this.interactionSpeakerBox?.setVisible(false);
+            this.interactionSpeakerText?.setVisible(false);
+            this.interactionPrompt?.setVisible(false);
+            return;
+        }
+
         const prompt = String(this.lastInteractionPrompt || '').trim();
         const hasPrompt = Boolean(prompt);
         const objectiveText = `현재 목표: ${GameState.getCurrentObjective()}`;
 
+        this.interactionGroup?.setVisible(true);
+        this.interactionPanel?.setVisible(true);
         this.interactionPortraitFrame?.setVisible(true);
+        this.interactionPortraitImage?.setVisible(true);
         this.interactionSpeakerBox?.setVisible(true);
         this.interactionSpeakerText?.setVisible(true);
         this.interactionSpeakerText?.setText('PIMS WORLD');
@@ -201,6 +222,12 @@ export class BottomHUD {
         this.interactionPrompt?.setText(objectiveText);
     }
 
+    setInteractionVisible(visible) {
+        this.interactionVisible = Boolean(visible);
+        this.interactionGroup?.setVisible(this.interactionVisible);
+        this.refreshInteractionPrompt();
+    }
+
     refreshInventory() {
         let items = [
             { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 },
@@ -216,6 +243,17 @@ export class BottomHUD {
                     color: 0xffd36e,
                     fontSize: '9px',
                     count: GameState.get('stage2CollectedCount') || 0
+                }
+            ];
+        } else if (GameState.get('currentChapter') === 3) {
+            items = [
+                { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 },
+                {
+                    id: 'stage3ReportBundle',
+                    label: '중간보고서',
+                    color: 0xffd36e,
+                    fontSize: '9px',
+                    count: GameState.get('stage3ReportCreated') ? 1 : 0
                 }
             ];
         } else {
@@ -289,6 +327,7 @@ export class BottomHUD {
     destroy() {
         this.interactionPrompt?.destroy();
         this.interactionPortraitFrame?.destroy();
+        this.interactionPortraitImage?.destroy();
         this.interactionSpeakerBox?.destroy();
         this.interactionSpeakerText?.destroy();
         this.container?.destroy(true);

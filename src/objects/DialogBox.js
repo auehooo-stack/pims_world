@@ -46,9 +46,10 @@ export class DialogBox {
         if (options.showBackdrop !== false) {
             if (hasTexture(scene, ASSETS.ui.dialogPanel.key)) {
                 this.backdrop = scene.add.image(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, ASSETS.ui.dialogPanel.key)
-                    .setDisplaySize(this.layout.panelWidth, DIALOG_HEIGHT - 18);
+                    .setDisplaySize(this.layout.panelWidth, DIALOG_HEIGHT - 18)
+                    .setAlpha(0.82);
             } else {
-                this.backdrop = scene.add.rectangle(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, this.layout.panelWidth, DIALOG_HEIGHT, 0x05050a, 0.88)
+                this.backdrop = scene.add.rectangle(this.layout.panelX + this.layout.panelWidth / 2, DIALOG_TOP + DIALOG_HEIGHT / 2, this.layout.panelWidth, DIALOG_HEIGHT, 0x05050a, 0.82)
                     .setStrokeStyle(2, 0x765dff, 0.8);
             }
             this.container.add(this.backdrop);
@@ -125,6 +126,8 @@ export class DialogBox {
         this.container.setVisible(true);
         this.advanceArea.setVisible(true);
         this.advanceArea.setInteractive({ useHandCursor: true });
+        this.scene?.bottomHud?.setInteractionVisible?.(false);
+        this.scene?.events?.emit('dialogbox:open', true);
         this.renderLine();
     }
 
@@ -135,6 +138,8 @@ export class DialogBox {
         this.lines = [];
         this.onComplete = null;
         this.container.setVisible(true);
+        this.scene?.bottomHud?.setInteractionVisible?.(false);
+        this.scene?.events?.emit('dialogbox:open', true);
         this.advanceArea.disableInteractive();
         this.advanceArea.setVisible(false);
         this.setNextIndicatorVisible(false);
@@ -303,6 +308,9 @@ export class DialogBox {
         this.advanceArea.setVisible(true);
         this.advanceArea.setInteractive({ useHandCursor: true });
         GameState.setTimeRunning(true);
+        this.scene?.bottomHud?.setInteractionVisible?.(true);
+        this.scene?.events?.emit('dialogbox:close', false);
+        this.scene?.bottomHud?.refresh?.();
         if (complete) {
             complete();
         }

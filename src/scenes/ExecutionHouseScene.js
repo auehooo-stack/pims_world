@@ -10,43 +10,38 @@ import { TopHUD } from '../objects/TopHUD.js';
 import { ASSETS, hasTexture } from '../systems/AssetManager.js';
 import { CENTER_X, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
-const RECEIPT_COLORS = {
-    운영비: 0x39e6c0,
-    사업추진비: 0xffc86e,
-    여비: 0x6f94ff,
-    자산취득비: 0xffd36e,
-    반려통: 0xff6b7d
+const RECEIPT_TOTAL = chapter2Data.receiptPool.length;
+const INITIAL_RECEIPT_COUNT = 6;
+const RECEIPT_DISPLAY_SIZE = 54;
+const RECEIPT_TILT_RANGE = 8;
+const HP_LOSS = 8;
+
+const CATEGORY_ORDER = ['운영비', '사업추진비', '여비', '자산취득비', '반려'];
+const EVIDENCE_KEYS = ['minutes', 'participants', 'signature', 'asset'];
+
+const moneyToNumber = (value) => {
+    const digits = String(value || '').replace(/[^\d]/g, '');
+    return digits ? Number(digits) : 0;
 };
-
-const GENERIC_RECEIPT_LABEL = '영수증 조각';
-
-const FLOOR_POINTS = [
-    { x: 300, y: 250 },
-    { x: 430, y: 286 },
-    { x: 560, y: 238 },
-    { x: 700, y: 302 },
-    { x: 820, y: 260 },
-    { x: 360, y: 350 },
-    { x: 500, y: 344 },
-    { x: 640, y: 336 }
-];
 
 export class ExecutionHouseScene extends Phaser.Scene {
     constructor() {
         super('ExecutionHouseScene');
         this.clickTarget = null;
-        this.receiptQueue = [];
-        this.pendingReceipts = [];
-        this.worldReceipts = [];
-        this.sortedCount = 0;
-        this.collectedCount = 0;
-        this.timerDays = chapter2Data.timerDays;
-        this.stagePhase = 'briefing';
-        this.stageResolved = false;
-        this.bonusWaveTriggered = false;
+        this.pendingArrivalAction = null;
+        this.popupMode = null;
+        this.bonusTriggered = false;
         this.timerLoop = null;
-        this.spawnLoop = null;
-        this.assetReminderCall = null;
+        this.stageResolved = false;
+        this.processedCount = 0;
+        this.registeredCount = 0;
+        this.rejectedCount = 0;
+        this.assetRegistered = false;
+        this.receiptQueue = [];
+        this.bonusQueue = [];
+        this.pendingPimsReceipts = [];
+        this.popupNodes = [];
+        this.actionNodes = [];
     }
 
     create() {
@@ -55,22 +50,41 @@ export class ExecutionHouseScene extends Phaser.Scene {
         GameState.set('stage2Phase', 'briefing');
         GameState.set('stage2CollectedCount', 0);
         GameState.set('stage2SortedCount', 0);
-        GameState.set('stage2ReceiptTarget', chapter2Data.receiptPool.length);
+        GameState.set('stage2ReceiptTarget', RECEIPT_TOTAL);
         GameState.set('stage2CurrentReceiptLabel', '');
         GameState.set('stage2CurrentReceiptCategory', '');
         GameState.set('stage2PendingAssetRegistration', false);
+        GameState.set('stage2InventoryItems', ['吏移⑥꽌']);
         GameState.set('stage2TimerRemaining', chapter2Data.timerDays);
         GameState.set('stage2Cleared', false);
         GameState.set('stage2Failed', false);
         GameState.set('executionRate', 0);
+        GameState.set('pimsRegistered', false);
         GameState.set('timeRunning', true);
-        this.bonusWaveTriggered = false;
+
+        this.receipts = chapter2Data.receiptPool.map((receipt, index) => ({
+            ...receipt,
+            index,
+            selectedCategory: null,
+            evidenceFlags: {
+                minutes: false,
+                participants: false,
+                signature: false,
+                asset: Boolean(receipt.asset)
+            },
+            classified: false,
+            rejected: false,
+            registered: false,
+            assetRegistered: false
+        }));
+        this.receiptQueue = [...this.receipts.slice(0, INITIAL_RECEIPT_COUNT)];
+        this.bonusQueue = [...this.receipts.slice(INITIAL_RECEIPT_COUNT)];
 
         this.cameras.main.setBackgroundColor(0x070d18);
         this.drawBackground();
         this.createHud();
         this.createWorld();
-        this.createReceiptPanel();
+        this.createDoorBanner();
         this.dialogue = new DialogueManager(this, {
             layout: this.bottomHud.getDialogLayout()
         });
@@ -81,39 +95,12 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ENTER', () => this.tryInteract());
         this.input.on('pointerdown', (pointer) => this.handlePointerDown(pointer));
 
-        this.pendingReceipts = Phaser.Utils.Array.Shuffle([...chapter2Data.receiptPool]);
         this.time.delayedCall(300, () => {
-            this.dialogue.say(chapter2Data.introLines, () => this.beginCollectionPhase());
+            this.dialogue.say(chapter2Data.introLines, () => this.beginFieldPhase());
         });
 
+        this.startTimer();
         this.refreshHud();
-    }
-
-    update() {
-        const blocked = this.dialogue.isActive || this.stageResolved;
-        this.worldReceipts.forEach((item) => item.update?.());
-        this.interactables?.forEach((item) => item.update?.());
-        this.interaction?.update(blocked);
-        this.refreshHud();
-
-        if (blocked) {
-            this.player.setMovement(0, 0);
-            return;
-        }
-
-        const axis = this.getKeyboardAxis();
-        if (axis.x !== 0 || axis.y !== 0) {
-            this.clickTarget = null;
-            const length = Math.hypot(axis.x, axis.y) || 1;
-            this.player.setMovement((axis.x / length) * this.player.speed, (axis.y / length) * this.player.speed);
-        } else if (this.clickTarget) {
-            this.moveTowardClickTarget();
-        } else {
-            this.player.setMovement(0, 0);
-        }
-
-        this.clampPlayerToWalkable();
-        this.player.syncLabel();
     }
 
     drawBackground() {
@@ -125,56 +112,16 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        const g = this.add.graphics();
-        g.setDepth(0);
+        const g = this.add.graphics().setDepth(0);
         g.fillStyle(0x05070f, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        g.fillStyle(0x0b1120, 1).fillRect(0, 0, GAME_WIDTH, 140);
-        g.fillStyle(0x111c30, 1).fillRect(0, 140, GAME_WIDTH, 240);
-        g.fillStyle(0x17233b, 1).fillRect(0, 380, GAME_WIDTH, 130);
-        g.fillStyle(0x0d1426, 1).fillRect(0, 510, GAME_WIDTH, 210);
-        g.fillStyle(0x171329, 1).fillRect(0, 600, GAME_WIDTH, 120);
-
-        g.fillStyle(0x1f2f4d, 0.9).fillRoundedRect(88, 168, 246, 140, 10);
-        g.fillStyle(0x0a1424, 0.95).fillRoundedRect(352, 160, 516, 178, 12);
-        g.fillStyle(0x1a2034, 0.95).fillRoundedRect(896, 152, 300, 210, 12);
-        g.fillStyle(0x121826, 0.94).fillRoundedRect(620, 384, 268, 156, 10);
-        g.fillStyle(0x2bf1d0, 0.08).fillRect(0, 154, GAME_WIDTH, 6);
-        g.fillStyle(0xffd36e, 0.08).fillRect(0, 382, GAME_WIDTH, 6);
-        g.fillStyle(0x6f94ff, 0.08).fillRect(0, 510, GAME_WIDTH, 4);
-
-        this.add.text(CENTER_X, 74, '집행의 집', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '42px',
-            color: '#fff4c9',
-            stroke: '#2c1346',
-            strokeThickness: 5,
-            shadow: {
-                offsetX: 2,
-                offsetY: 2,
-                blur: 0,
-                color: '#000000',
-                fill: true,
-                stroke: true
-            }
-        }).setOrigin(0.5).setDepth(1);
-
-        this.add.text(174, 196, '영수증 수거 구역', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#c9ffef'
-        }).setDepth(1);
-
-        this.add.text(846, 174, 'PIMS 등록 구역', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#c9ffef'
-        }).setDepth(1);
-
-        this.add.text(586, 402, '분류 바구니', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '13px',
-            color: '#9aa0c8'
-        }).setDepth(1);
+        g.fillStyle(0x0b1120, 1).fillRect(0, 0, GAME_WIDTH, 150);
+        g.fillStyle(0x121c31, 1).fillRect(0, 150, GAME_WIDTH, 220);
+        g.fillStyle(0x18243d, 1).fillRect(0, 370, GAME_WIDTH, 150);
+        g.fillStyle(0x0d1426, 1).fillRect(0, 520, GAME_WIDTH, 200);
+        g.fillStyle(0x171329, 1).fillRect(0, 610, GAME_WIDTH, 110);
+        g.fillStyle(0x2bf1d0, 0.08).fillRect(0, 148, GAME_WIDTH, 4);
+        g.fillStyle(0xffd36e, 0.08).fillRect(0, 370, GAME_WIDTH, 4);
+        g.fillStyle(0x6f94ff, 0.08).fillRect(0, 520, GAME_WIDTH, 4);
     }
 
     createHud() {
@@ -195,6 +142,18 @@ export class ExecutionHouseScene extends Phaser.Scene {
             animated: true
         }, () => this.handleAssistantInteract());
 
+        this.receiptPile = new InteractableObject(this, {
+            id: 'receipt',
+            name: '영수증 더미',
+            prompt: chapter2Data.receiptPilePrompt,
+            x: chapter2Data.receiptPile.x,
+            y: chapter2Data.receiptPile.y,
+            width: chapter2Data.receiptPile.width,
+            height: chapter2Data.receiptPile.height,
+            color: 0xffd36e,
+            animated: false
+        }, () => this.handleReceiptPileInteract());
+
         this.pims = new InteractableObject(this, {
             id: 'terminal',
             name: 'PIMS 단말기',
@@ -207,84 +166,109 @@ export class ExecutionHouseScene extends Phaser.Scene {
             animated: false
         }, () => this.handlePimsInteract());
 
-        this.baskets = chapter2Data.baskets.map((basket) => this.createBasket(basket));
-
         this.player = new Player(this, chapter2Data.playerStart.x, chapter2Data.playerStart.y);
-        this.player.speed = 274;
+        this.player.speed = 260;
 
-        this.interactables = [this.assistant, this.pims, ...this.baskets];
+        this.interactables = [this.assistant, this.receiptPile, this.pims];
         this.interaction = new InteractionManager(this, this.player, this.interactables, (prompt) => this.bottomHud.setInteractionPrompt(prompt));
+
+        this.decorativeBanners = chapter2Data.decorativeBaskets.map((basket) => this.createDecorationBanner(basket));
     }
 
-    createBasket(config) {
-        const container = this.add.container(config.x, config.y).setDepth(3);
-        const shadow = this.add.ellipse(0, 28, config.width * 0.7, 12, 0x000000, 0.24).setScale(1, 0.8);
-        const body = this.add.rectangle(0, 0, config.width, config.height, 0x11172a, 0.92)
-            .setStrokeStyle(2, config.color, 0.58);
-        const tag = this.add.rectangle(0, -20, config.width - 18, 8, config.color, 0.9);
-        const label = this.add.text(0, -3, config.label, {
+    createDecorationBanner(config) {
+        const container = this.add.container(config.x, config.y).setDepth(2);
+        const shadow = this.add.ellipse(0, 22, config.width * 0.86, 11, 0x000000, 0.22).setScale(1, 0.8);
+        const body = this.add.rectangle(0, 0, config.width, config.height, 0x11172a, 0.78)
+            .setStrokeStyle(2, config.color, 0.38);
+        const label = this.add.text(0, 0, config.label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff',
             stroke: '#000000',
             strokeThickness: 2
         }).setOrigin(0.5);
-        container.add([shadow, body, tag, label]);
-
-        const zone = {
-            id: config.id,
-            label: config.label,
-            category: config.category,
-            x: config.x,
-            y: config.y,
-            prompt: `Space: ${config.label} 바구니에 넣기`,
-            onInteract: () => this.handleBasketInteract(zone),
-            setInteractionFocus: (focused) => {
-                body.setStrokeStyle(2, config.color, focused ? 0.98 : 0.58);
-                body.setFillStyle(0x18233e, focused ? 1 : 0.92);
-                label.setColor(focused ? '#fff5c7' : '#f8f3ff');
-            },
-            update: () => {
-                zone.x = container.x;
-                zone.y = container.y;
-            },
-            destroy: () => container.destroy(true),
-            container
-        };
-
-        return zone;
+        container.add([shadow, body, label]);
+        return container;
     }
 
-    createReceiptPanel() {
-        this.receiptPanel = this.add.rectangle(422, 240, 360, 216, 0x070b18, 0.84)
-            .setStrokeStyle(2, 0x75f6ff, 0.45)
-            .setDepth(40);
-        this.receiptTitle = this.add.text(206, 136, '현재 영수증', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#fff5c7'
-        }).setDepth(41);
-        this.receiptLabel = this.add.text(206, 164, '영수증을 모으는 중', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#f8f3ff',
-            wordWrap: { width: 286 }
-        }).setDepth(41);
-        this.receiptMeta = this.add.text(206, 204, '수거 0/10 · 분류 0/10', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '13px',
-            color: '#9aa0c8',
-            wordWrap: { width: 286 },
-            lineSpacing: 6
-        }).setDepth(41);
-        this.receiptPanel.setVisible(false);
-        this.receiptTitle.setVisible(false);
-        this.receiptLabel.setVisible(false);
-        this.receiptMeta.setVisible(false);
+    createDoorBanner() {
+        this.add.text(CENTER_X, 72, chapter2Data.subtitle, {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '38px',
+            color: '#fff4c9',
+            stroke: '#2c1346',
+            strokeThickness: 5,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                blur: 0,
+                color: '#000000',
+                fill: true,
+                stroke: true
+            }
+        }).setOrigin(0.5).setDepth(1);
     }
 
-    openBriefing() {
-        this.dialogue.say(chapter2Data.introLines, () => this.beginCollectionPhase());
+    update() {
+        const blocked = this.dialogue?.isActive || this.stageResolved || this.popupMode;
+        this.interactables?.forEach((item) => item.update?.());
+        this.interaction?.update(Boolean(blocked));
+        this.refreshHud();
+
+        if (blocked) {
+            this.player.setMovement(0, 0);
+            return;
+        }
+
+        const axis = this.getKeyboardAxis();
+        if (axis.x !== 0 || axis.y !== 0) {
+            this.clickTarget = null;
+            this.pendingArrivalAction = null;
+            const length = Math.hypot(axis.x, axis.y) || 1;
+            this.player.setMovement((axis.x / length) * this.player.speed, (axis.y / length) * this.player.speed);
+        } else if (this.clickTarget) {
+            this.moveTowardClickTarget();
+        } else {
+            this.player.setMovement(0, 0);
+        }
+
+        this.clampPlayerToWalkable();
+        this.player.syncLabel();
+    }
+
+    beginFieldPhase() {
+        if (this.stageResolved) {
+            return;
+        }
+
+        this.stagePhase = 'field';
+        GameState.set('stage2BriefingDone', true);
+        GameState.set('stage2Phase', 'field');
+        GameState.setTimeRunning(true);
+        this.bottomHud.setInteractionVisible(true);
+        this.bottomHud.setInteractionPrompt(chapter2Data.receiptPilePrompt);
+        this.refreshHud();
+    }
+
+    startTimer() {
+        this.timerLoop?.remove(false);
+        this.timerDays = chapter2Data.timerDays;
+        GameState.set('stage2TimerRemaining', this.timerDays);
+        this.timerLoop = this.time.addEvent({
+            delay: chapter2Data.timerTickMs,
+            loop: true,
+            callback: () => {
+                if (this.stageResolved || !GameState.get('timeRunning')) {
+                    return;
+                }
+
+                this.timerDays = Math.max(0, this.timerDays - 1);
+                GameState.set('stage2TimerRemaining', this.timerDays);
+                if (this.timerDays <= 0) {
+                    this.failStage(chapter2Data.failMessage);
+                }
+            }
+        });
     }
 
     handleAssistantInteract() {
@@ -292,402 +276,1062 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
+        if (this.popupMode === 'classification') {
+            this.showPopupNotice('먼저 현재 영수증을 처리하세요.', 0xffd36e);
+            return;
+        }
+
+        if (this.popupMode === 'registration') {
+            this.showPopupNotice('먼저 등록 대기 목록을 확인하세요.', 0xffd36e);
+            return;
+        }
+
         if (this.stagePhase === 'briefing') {
-            this.openBriefing();
+            this.dialogue.say(chapter2Data.introLines, () => this.beginFieldPhase());
             return;
         }
 
-        if (this.stagePhase === 'collect') {
-            this.showAssistantBark('먼저 영수증을 모으세요.', 1800);
+        if (this.stagePhase === 'field') {
+            this.dialogue.say([
+                { speaker: 'KCA 간사', text: '영수증 더미를 클릭해 집행 처리를 시작하세요.' }
+            ]);
             return;
         }
 
-        const current = this.receiptQueue[0];
-        if (this.stagePhase === 'sort' && current) {
-            if (current.asset && !current.registered) {
-                this.showAssistantBark('자산취득비는 PIMS에 먼저 등록해야 합니다.', 2400);
+        if (this.stagePhase === 'classification') {
+            const current = this.getCurrentReceipt();
+            if (current?.asset && !current.assetRegistered) {
+                this.dialogue.say([
+                    { speaker: 'KCA 간사', text: chapter2Data.assetReminder }
+                ]);
                 return;
             }
-            this.showAssistantBark(`${current.label}은 ${current.invalid ? '반려통' : current.category}입니다.`, 2400);
+
+            this.dialogue.say([
+                { speaker: 'KCA 간사', text: '분류가 끝나면 PIMS 단말기로 이동하세요.' }
+            ]);
             return;
         }
 
-        this.showAssistantBark('영수증을 바구니에 분류하세요.', 1800);
-    }
-
-    beginCollectionPhase() {
-        this.stagePhase = 'collect';
-        GameState.set('stage2BriefingDone', true);
-        GameState.set('stage2Phase', 'collect');
-        console.log('[ExecutionHouseScene] beginCollectionPhase');
-        this.updateReceiptState();
-        this.spawnReceiptBurst(6);
-        this.showToast('영수증을 주워 모으세요.', 0xc9ffef);
-    }
-
-    beginSortingPhase() {
-        if (this.stagePhase === 'sort' || this.stageResolved) {
+        if (this.stagePhase === 'pimsApproach' || this.stagePhase === 'registration') {
+            this.dialogue.say(chapter2Data.registrationPromptLines);
             return;
         }
 
-        this.stagePhase = 'sort';
-        GameState.set('stage2Phase', 'sort');
-        this.timerDays = chapter2Data.timerDays;
-        GameState.set('stage2TimerRemaining', this.timerDays);
-        this.updateReceiptState();
-        this.startSortingTimer();
-        this.showToast('이제 바구니로 분류하세요.', 0xfff0a8);
+        this.dialogue.say([
+            { speaker: 'KCA 간사', text: '영수증을 분류하고 PIMS 등록까지 완료해야 합니다.' }
+        ]);
     }
 
-    startSortingTimer() {
-        this.timerLoop?.remove(false);
-        this.timerLoop = this.time.addEvent({
-            delay: chapter2Data.timerTickMs,
-            loop: true,
-            callback: () => {
-                if (this.stageResolved || this.stagePhase !== 'sort' || !GameState.get('timeRunning')) {
-                    return;
-                }
-                this.timerDays = Math.max(0, this.timerDays - 1);
-                GameState.set('stage2TimerRemaining', this.timerDays);
-                if (this.timerDays <= 0) {
-                    this.failStage('시간 초과! 집행의 집을 비워야 합니다.');
-                }
-            }
-        });
-    }
-
-    spawnReceiptBurst(count) {
-        const burstCount = Math.min(count, this.pendingReceipts.length);
-        console.log('[ExecutionHouseScene] spawnReceiptBurst', { count, burstCount, pending: this.pendingReceipts.length });
-        for (let i = 0; i < burstCount; i += 1) {
-            const def = this.pendingReceipts.shift();
-            if (!def) {
-                continue;
-            }
-            const point = FLOOR_POINTS[i % FLOOR_POINTS.length];
-            const target = {
-                x: point.x + Phaser.Math.Between(-18, 18),
-                y: point.y + Phaser.Math.Between(-12, 12)
-            };
-            this.spawnReceipt(def, chapter2Data.assistant.x, chapter2Data.assistant.y - 22, true, target);
+    handleReceiptPileInteract() {
+        if (this.stageResolved) {
+            return;
         }
-    }
 
-    spawnReceipt(def, x, y, thrown = false, target = null) {
-        const color = RECEIPT_COLORS[def.category] || 0xc9ffef;
-        const receipt = {
-            id: def.id,
-            label: def.label,
-            category: def.category,
-            purpose: def.purpose,
-            amount: def.amount,
-            place: def.place,
-            note: def.note,
-            asset: Boolean(def.asset),
-            invalid: Boolean(def.invalid),
-            registered: false,
-            available: !thrown,
-            x,
-              y,
-              prompt: 'Space: 영수증 줍기',
-              onInteract: () => this.collectReceipt(receipt),
-              setInteractionFocus: (focused) => {
-                  receipt.body?.setAlpha(focused ? 1 : 0.92);
-                  receipt.body?.setTint?.(focused ? 0xffffff : 0xf6f1e7);
-                  receipt.fold?.setAlpha(focused ? 1 : 0.82);
-                },
-            update: () => {
-                if (receipt.container) {
-                    receipt.x = receipt.container.x;
-                    receipt.y = receipt.container.y;
-                }
-            },
-            destroy: () => receipt.container?.destroy(true)
+        if (this.stagePhase !== 'field') {
+            this.showPopupNotice('먼저 간사와 대화를 마치고 영수증 처리를 시작하세요.', 0xffd36e);
+            return;
+        }
+
+        const target = {
+            x: chapter2Data.receiptPile.x - 66,
+            y: chapter2Data.receiptPile.y + 48
         };
 
-        const container = this.add.container(x, y).setDepth(thrown ? 6.5 : 6);
-        const shadow = this.add.ellipse(0, 34, 74, 16, 0x000000, 0.26).setScale(1, 0.8);
-        let body;
-        if (hasTexture(this, ASSETS.objects.receipt.key)) {
-            body = this.add.image(0, 0, ASSETS.objects.receipt.key).setDisplaySize(58, 58).setOrigin(0.5);
-            container.add([shadow, body]);
-        } else {
-            body = this.add.rectangle(0, 0, 58, 58, 0xf5f1e7, 0.97).setStrokeStyle(2, color, 0.52);
-            const fold = this.add.triangle(48, -20, 0, 0, 12, 0, 12, 12, 0xfdfbf2, 0.95)
-                .setStrokeStyle(1, 0xd7d0c4, 0.45);
-            const line1 = this.add.rectangle(-12, -8, 58, 3, 0xc9c4b8, 0.7);
-            const line2 = this.add.rectangle(-10, 2, 48, 3, 0xc9c4b8, 0.54);
-            const line3 = this.add.rectangle(-16, 12, 66, 3, 0xc9c4b8, 0.48);
-            const stamp = this.add.rectangle(38, 10, 18, 12, color, 0.75);
-            container.add([shadow, body, fold, line1, line2, line3, stamp]);
-            receipt.fold = fold;
-        }
-        if (body?.setTint) {
-            body.setTint(0xffffff);
-        }
-        receipt.container = container;
-        receipt.body = body;
-        receipt.fold = receipt.fold || null;
-        receipt.shadow = shadow;
-        receipt.color = color;
-
-        if (thrown) {
-            const startX = x + Phaser.Math.Between(-24, 24);
-            const startY = y - Phaser.Math.Between(40, 70);
-            container.setPosition(startX, startY);
-            this.tweens.add({
-                targets: container,
-                x: target?.x || x,
-                y: target?.y || y,
-                duration: Phaser.Math.Between(420, 620),
-                ease: 'Quad.easeOut',
-                onComplete: () => {
-                    receipt.available = true;
-                    this.showToast('영수증이 도착했습니다.', 0x75f6ff);
-                }
+        this.stagePhase = 'receiptApproach';
+        GameState.set('stage2Phase', 'receiptApproach');
+        this.bottomHud.setInteractionPrompt(chapter2Data.receiptPilePrompt);
+        this.bottomHud.refresh();
+        this.movePlayerTo(target, () => {
+            this.showActionPanel({
+                title: chapter2Data.receiptStartLabel,
+                hint: chapter2Data.receiptStartHint,
+                buttonLabel: chapter2Data.receiptStartLabel,
+                onClick: () => this.openClassificationPopup(),
+                color: 0xffd36e,
+                x: chapter2Data.receiptPile.x + 92,
+                y: chapter2Data.receiptPile.y - 10
             });
-        }
-
-        this.worldReceipts.push(receipt);
-        this.interactables.push(receipt);
-        return receipt;
+        });
     }
 
-    collectReceipt(receipt) {
-        if (this.stageResolved || !receipt.available || receipt.collected) {
+    handlePimsInteract() {
+        if (this.stageResolved) {
             return;
         }
 
-        receipt.collected = true;
-        const index = this.interactables.indexOf(receipt);
-        if (index >= 0) {
-            this.interactables.splice(index, 1);
+        if (this.stagePhase !== 'pimsApproach' && this.stagePhase !== 'registration') {
+            this.showPopupNotice('먼저 분류를 완료한 뒤 PIMS 등록으로 이동하세요.', 0xffd36e);
+            return;
         }
 
-        this.tweens.add({
-            targets: receipt.container,
-            alpha: { from: 1, to: 0 },
-            scale: { from: 1, to: 0.72 },
-            duration: 180,
-            onComplete: () => receipt.destroy()
+        if (!this.receipts.every((receipt) => receipt.classified || receipt.rejected)) {
+            this.showPopupNotice('아직 분류되지 않은 영수증이 있습니다.', 0xffd36e);
+            return;
+        }
+
+        const target = {
+            x: chapter2Data.pims.x - 72,
+            y: chapter2Data.pims.y + 72
+        };
+
+        this.stagePhase = 'pimsApproach';
+        GameState.set('stage2Phase', 'pimsApproach');
+        this.bottomHud.setInteractionPrompt(chapter2Data.pimsHint);
+        this.bottomHud.refresh();
+        this.movePlayerTo(target, () => {
+            this.showActionPanel({
+                title: chapter2Data.pimsStartLabel,
+                hint: chapter2Data.pimsStartHint,
+                buttonLabel: chapter2Data.pimsStartLabel,
+                onClick: () => this.openRegistrationPopup(),
+                color: 0x75f6ff,
+                x: chapter2Data.pims.x - 20,
+                y: chapter2Data.pims.y + 10
+            });
+        });
+    }
+
+    movePlayerTo(target, onArrive) {
+        this.clickTarget = target;
+        this.pendingArrivalAction = onArrive || null;
+    }
+
+    moveTowardClickTarget() {
+        if (!this.clickTarget) {
+            return;
+        }
+
+        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.clickTarget.x, this.clickTarget.y);
+        if (distance < 4) {
+            this.clickTarget = null;
+            this.player.setMovement(0, 0);
+            const callback = this.pendingArrivalAction;
+            this.pendingArrivalAction = null;
+            callback?.();
+            return;
+        }
+
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.clickTarget.x, this.clickTarget.y);
+        this.player.setMovement(Math.cos(angle) * this.player.speed, Math.sin(angle) * this.player.speed);
+    }
+
+    handlePointerDown(pointer) {
+        if (this.dialogue?.isActive || this.stageResolved || this.popupMode) {
+            return;
+        }
+
+        const worldBottom = chapter2Data.walkableArea.y + chapter2Data.walkableArea.height;
+        if (pointer.y < 136 || pointer.y > worldBottom) {
+            return;
+        }
+
+        this.clickTarget = this.clampToWalkable(pointer.x, pointer.y);
+        this.pendingArrivalAction = null;
+    }
+
+    tryInteract() {
+        if (this.dialogue?.isActive || this.popupMode || this.stageResolved) {
+            return;
+        }
+        this.interaction.interact();
+    }
+
+    openClassificationPopup() {
+        if (this.stageResolved) {
+            return;
+        }
+
+        this.stagePhase = 'classification';
+        GameState.set('stage2Phase', 'classification');
+        GameState.setTimeRunning(false);
+        this.clearActionPanel();
+        this.setHudVisible(false);
+        this.clearPopup();
+
+        this.currentPopupIndex = 0;
+        this.popupMode = 'classification';
+        this.classificationWorkingQueue = [...this.receiptQueue];
+        if (!this.classificationWorkingQueue.length) {
+            this.classificationWorkingQueue = this.receipts.slice(0, INITIAL_RECEIPT_COUNT);
+            this.receiptQueue = [...this.classificationWorkingQueue];
+        }
+
+        this.createClassificationPopup();
+        this.refreshClassificationPopup();
+    }
+
+    createClassificationPopup() {
+        const overlay = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.64)
+            .setOrigin(0.5)
+            .setDepth(1000);
+        const panel = this.add.rectangle(CENTER_X, 312, 1184, 600, 0x0f1020, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x75f6ff, 0.42)
+            .setDepth(1001);
+        const title = this.add.text(CENTER_X, 34, '영수증 폭풍 : 비세목 분류 대작전', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '32px',
+            color: '#fff4c9',
+            stroke: '#2c1346',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(1002);
+
+        const progressText = this.add.text(54, 82, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#c9ffef'
+        }).setDepth(1002);
+        const timerText = this.add.text(260, 82, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff5c7'
+        }).setDepth(1002);
+        const hpText = this.add.text(470, 82, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#ffd36e'
+        }).setDepth(1002);
+        const summaryText = this.add.text(675, 82, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#c9ffef'
+        }).setDepth(1002);
+
+        const cardPanel = this.add.rectangle(304, 210, 520, 320, 0x11172a, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0xffd36e, 0.36)
+            .setDepth(1001);
+        const cardTitle = this.add.text(84, 120, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '24px',
+            color: '#fff5c7'
+        }).setDepth(1002);
+        const cardBody = this.add.text(84, 160, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '17px',
+            color: '#f8f3ff',
+            wordWrap: { width: 430 },
+            lineSpacing: 8
+        }).setDepth(1002);
+
+        const infoPanel = this.add.rectangle(848, 210, 300, 320, 0x11172a, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x75f6ff, 0.36)
+            .setDepth(1001);
+        const statusTitle = this.add.text(702, 120, '처리 상태', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '20px',
+            color: '#c9ffef'
+        }).setDepth(1002);
+        const statusText = this.add.text(702, 160, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#f8f3ff',
+            wordWrap: { width: 252 },
+            lineSpacing: 8
+        }).setDepth(1002);
+        const stampText = this.add.text(870, 330, '', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '28px',
+            color: '#ffd36e',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(1002);
+
+        const messageText = this.add.text(CENTER_X, 500, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            color: '#c9ffef',
+            wordWrap: { width: 1000 },
+            align: 'center'
+        }).setOrigin(0.5).setDepth(1002);
+
+        this.popupContainer = this.add.container(0, 0).setDepth(1000);
+        this.popupContainer.add([
+            overlay,
+            panel,
+            title,
+            progressText,
+            timerText,
+            hpText,
+            summaryText,
+            cardPanel,
+            cardTitle,
+            cardBody,
+            infoPanel,
+            statusTitle,
+            statusText,
+            stampText,
+            messageText
+        ]);
+
+        this.popupNodes = [overlay, panel, title, progressText, timerText, hpText, summaryText, cardPanel, cardTitle, cardBody, infoPanel, statusTitle, statusText, stampText, messageText];
+        this.popupProgressText = progressText;
+        this.popupTimerText = timerText;
+        this.popupHpText = hpText;
+        this.popupSummaryText = summaryText;
+        this.popupCardTitle = cardTitle;
+        this.popupCardBody = cardBody;
+        this.popupStatusText = statusText;
+        this.popupStampText = stampText;
+        this.popupMessageText = messageText;
+
+        this.classificationCategoryButtons = [];
+        this.classificationEvidenceButtons = [];
+        this.classificationActionButtons = {};
+
+        this.add.text(92, 356, '1. 비세목 선택', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff4c9'
+        }).setDepth(1002);
+        [
+            '운영비',
+            '사업추진비',
+            '여비',
+            '자산취득비',
+            '반려'
+        ].forEach((label, index) => {
+            const button = this.createButton(this.popupContainer, 92 + index * 212, 392, label, () => this.selectCategory(label), {
+                width: 194,
+                height: 46,
+                fontSize: 18,
+                depth: 1002
+            });
+            this.classificationCategoryButtons.push({ label, ...button });
         });
 
-        this.receiptQueue.push(receipt);
-        this.collectedCount += 1;
-        this.showToast('영수증을 주웠습니다.', 0xc9ffef);
-        this.updateReceiptState();
-
-        if (!this.bonusWaveTriggered && this.stagePhase === 'collect' && this.collectedCount >= 3 && this.pendingReceipts.length > 0) {
-            this.bonusWaveTriggered = true;
-            this.time.delayedCall(500, () => {
-                if (this.stageResolved || this.stagePhase !== 'collect') {
-                    return;
-                }
-                this.showAssistantBark('아차! 대리님 여기 영수증 뭉치가 더 있네요!', 2200);
-                this.spawnReceiptBurst(this.pendingReceipts.length);
+        this.add.text(92, 438, '2. 추가 처리', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#c9ffef'
+        }).setDepth(1002);
+        [
+            { key: 'minutes', label: '회의록 첨부' },
+            { key: 'participants', label: '참여명단 첨부' },
+            { key: 'signature', label: '서명 증빙 첨부' },
+            { key: 'asset', label: 'PIMS 자산등록' }
+        ].forEach((entry, index) => {
+            const button = this.createButton(this.popupContainer, 92 + index * 212, 474, entry.label, entry.key === 'asset'
+                ? () => this.registerAssetCurrentReceipt()
+                : () => this.toggleEvidence(entry.key), {
+                width: 194,
+                height: 44,
+                fontSize: 16,
+                depth: 1002
             });
+            this.classificationEvidenceButtons.push({ key: entry.key, label: entry.label, ...button });
+        });
+
+        this.add.text(92, 522, '3. 처리', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff5c7'
+        }).setDepth(1002);
+        this.classificationActionButtons.complete = this.createButton(this.popupContainer, 300, 560, '분류 완료', () => this.completeCurrentReceipt(), {
+            width: 240,
+            height: 52,
+            fontSize: 19,
+            depth: 1002
+        });
+        this.classificationActionButtons.reject = this.createButton(this.popupContainer, 580, 560, '반려 처리', () => this.rejectCurrentReceipt(), {
+            width: 240,
+            height: 52,
+            fontSize: 19,
+            depth: 1002
+        });
+        this.classificationActionButtons.refresh = this.createButton(this.popupContainer, 860, 560, '다시 보기', () => this.refreshClassificationPopup(), {
+            width: 240,
+            height: 52,
+            fontSize: 19,
+            depth: 1002
+        });
+    }
+
+    refreshClassificationPopup() {
+        if (!this.popupContainer || this.popupMode !== 'classification') {
+            return;
         }
 
-        if (this.collectedCount >= chapter2Data.receiptPool.length && this.pendingReceipts.length === 0) {
-            this.beginSortingPhase();
+        const receipt = this.getCurrentReceipt();
+        this.updateClassificationPopupControls(receipt);
+
+        if (!receipt) {
+            this.popupCardTitle.setText('영수증 분류 완료');
+            this.popupCardBody.setText('모든 영수증을 처리했습니다.');
+            this.popupStatusText.setText('이제 PIMS 단말기로 이동하세요.');
+            this.popupStampText.setText('');
+            this.popupProgressText.setText(`처리 현황: ${this.processedCount}/${RECEIPT_TOTAL}`);
+            this.popupTimerText.setText(`D-${this.timerDays}`);
+            this.popupHpText.setText(`HP: ${GameState.get('hp')} / 100`);
+            this.popupSummaryText.setText(`정상 ${this.registeredCount}건 / 반려 ${this.rejectedCount}건 / 실수 ${this.mistakeCount || 0}회`);
+            this.popupMessageText.setText('');
+            return;
         }
+
+        const currentNumber = Math.min(this.processedCount + 1, RECEIPT_TOTAL);
+        this.popupProgressText.setText(`영수증 ${currentNumber} / ${RECEIPT_TOTAL}`);
+        this.popupTimerText.setText(`PIMS 등록기한 D-${this.timerDays}`);
+        this.popupHpText.setText(`HP: ${GameState.get('hp')} / 100`);
+        this.popupSummaryText.setText(`정상 ${this.registeredCount}건 / 반려 ${this.rejectedCount}건 / 실수 ${this.mistakeCount || 0}회`);
+        this.popupCardTitle.setText(receipt.title);
+        this.popupCardBody.setText([
+            `품목: ${receipt.itemName}`,
+            `사용 목적: ${receipt.purpose}`,
+            `집행일: ${receipt.expenseDate}`,
+            `사용 시간: ${receipt.useTime}`,
+            `금액: ${receipt.amount}`,
+            `특이사항: ${receipt.note || '-'}`,
+            '',
+            `정답 비세목: ${receipt.correctCategory}`,
+            `필수 증빙: ${this.getReceiptRequirementSummary(receipt)}`
+        ].join('\n'));
+        this.popupStampText.setText(receipt.rejected ? '반려 완료' : receipt.classified ? '분류 완료' : '');
+        this.popupMessageText.setText('영수증의 내용과 사용 목적을 보고 비세목을 판단하세요.');
+    }
+
+    updateClassificationPopupControls(receipt) {
+        if (!this.popupContainer || this.popupMode !== 'classification') {
+            return;
+        }
+
+        const selected = receipt?.selectedCategory || '미선택';
+        const amount = moneyToNumber(receipt?.amount);
+        const isPromotion = receipt?.correctCategory === '사업추진비' || selected === '사업추진비';
+        const needsMeetingExtras = isPromotion && amount >= 500000;
+        const isAsset = receipt?.correctCategory === '자산취득비' || selected === '자산취득비';
+
+        this.classificationCategoryButtons?.forEach((entry) => {
+            entry?.setEnabled?.(true);
+            entry?.setSelected?.(receipt?.selectedCategory === entry.label);
+        });
+
+        this.classificationEvidenceButtons?.forEach((entry) => {
+            let enabled = false;
+            if (entry.key === 'minutes') {
+                enabled = isPromotion;
+            } else if (entry.key === 'participants' || entry.key === 'signature') {
+                enabled = needsMeetingExtras;
+            } else if (entry.key === 'asset') {
+                enabled = isAsset;
+            }
+            entry?.setEnabled?.(enabled);
+        });
+
+        this.classificationActionButtons?.complete?.setEnabled?.(Boolean(receipt?.selectedCategory));
+        this.classificationActionButtons?.reject?.setEnabled?.(true);
+        this.classificationActionButtons?.refresh?.setEnabled?.(true);
+
+        if (this.popupStatusText) {
+            const assetStatus = receipt?.asset ? (receipt.assetRegistered ? '✓' : '□') : '-';
+            const registrationState = receipt?.rejected ? '등록 제외' : '등록 대기';
+            this.popupStatusText.setText([
+                `선택 비세목: ${selected}`,
+                `회의록: ${receipt?.evidenceFlags.minutes ? '✓' : '□'}`,
+                `참여명단: ${receipt?.evidenceFlags.participants ? '✓' : '□'}`,
+                `서명 증빙: ${receipt?.evidenceFlags.signature ? '✓' : '□'}`,
+                `PIMS 자산등록: ${assetStatus}`,
+                `PIMS 등록 상태: ${registrationState}`
+            ].join('\n'));
+        }
+    }
+
+    getCurrentReceipt() {
+        return this.receiptQueue[0] || null;
+    }
+
+    getReceiptRequirementSummary(receipt) {
+        if (!receipt) {
+            return '-';
+        }
+
+        if (receipt.invalid) {
+            return '반려 처리';
+        }
+
+        if (receipt.asset) {
+            return 'PIMS 자산등록 후 분류 완료';
+        }
+
+        if (receipt.correctCategory === '사업추진비') {
+            const amount = moneyToNumber(receipt.amount);
+            if (amount >= 500000) {
+                return '회의록 + 참여명단 + 서명 증빙';
+            }
+            return '회의록 첨부';
+        }
+
+        return '기본 증빙 확인 후 분류';
+    }
+
+    selectCategory(category) {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        receipt.selectedCategory = category;
+        this.refreshClassificationPopup();
+    }
+
+    toggleEvidence(key) {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        if (key === 'asset') {
+            this.registerAssetCurrentReceipt();
+            return;
+        }
+
+        if (key !== 'minutes' && key !== 'participants' && key !== 'signature') {
+            return;
+        }
+
+        if (receipt.correctCategory !== '사업추진비') {
+            this.showPopupNotice('이 영수증에는 회의록이 필요하지 않습니다.', 0xffd36e);
+            return;
+        }
+
+        const amount = moneyToNumber(receipt.amount);
+        if ((key === 'participants' || key === 'signature') && amount < 500000) {
+            this.showPopupNotice('50만원 이상 사업추진비에서만 필요한 증빙입니다.', 0xffd36e);
+            return;
+        }
+
+        receipt.evidenceFlags[key] = !receipt.evidenceFlags[key];
+        this.refreshClassificationPopup();
+    }
+
+    registerAssetCurrentReceipt() {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        if (receipt.correctCategory !== '자산취득비') {
+            this.showPopupNotice('이 영수증은 자산취득비가 아니므로 자산등록이 필요하지 않습니다.', 0xffd36e);
+            return;
+        }
+
+        receipt.assetRegistered = true;
+        this.popupStampText.setText('PIMS 자산등록 O');
+        this.popupMessageText.setText('자산취득비 등록을 완료했습니다. 이제 분류 완료를 누르세요.');
+        this.refreshClassificationPopup();
+    }
+
+    completeCurrentReceipt() {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        if (!receipt.selectedCategory) {
+            this.showPopupNotice('비세목을 먼저 선택하세요.', 0xfff0a8);
+            return;
+        }
+
+        if (receipt.invalid) {
+            if (receipt.selectedCategory !== '반려') {
+                this.applyWrongAnswer('사업 목적과 관련 없는 지출은 반려해야 합니다.', receipt);
+                return;
+            }
+            this.markReceiptRejected(receipt, '반려 완료');
+            return;
+        }
+
+        if (receipt.selectedCategory === '반려') {
+            this.applyWrongAnswer('반려 대상이 아닌 영수증입니다.', receipt);
+            return;
+        }
+
+        if (receipt.selectedCategory !== receipt.correctCategory) {
+            this.applyWrongAnswer(receipt.feedbackWrong || '비세목이 맞지 않습니다.', receipt);
+            return;
+        }
+
+        if (receipt.correctCategory === '사업추진비') {
+            const amount = moneyToNumber(receipt.amount);
+            const needParticipants = amount >= 500000;
+            if (!receipt.evidenceFlags.minutes) {
+                this.applyWrongAnswer('사업추진비 지출은 회의록 등 증빙이 필요합니다.', receipt);
+                return;
+            }
+            if (needParticipants && (!receipt.evidenceFlags.participants || !receipt.evidenceFlags.signature)) {
+                this.applyWrongAnswer('50만원 이상 회의비는 회의 참여명단 및 서명 증빙까지 확인해야 합니다.', receipt);
+                return;
+            }
+        }
+
+        if (receipt.correctCategory === '자산취득비' && !receipt.assetRegistered) {
+            this.applyWrongAnswer('자산취득비는 PIMS 자산등록 후 분류 완료할 수 있습니다.', receipt);
+            return;
+        }
+
+        this.markReceiptClassified(receipt);
+    }
+
+    rejectCurrentReceipt() {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        receipt.selectedCategory = '반려';
+        this.completeCurrentReceipt();
+    }
+
+    applyWrongAnswer(message, receipt = null) {
+        this.mistakeCount = (this.mistakeCount || 0) + 1;
+        GameState.decreaseHp(HP_LOSS);
+        this.showPopupNotice(message, 0xff6b7d);
+        this.tweens.add({
+            targets: this.popupContainer,
+            x: { from: this.popupContainer.x - 8, to: this.popupContainer.x + 8 },
+            duration: 60,
+            yoyo: true,
+            repeat: 2
+        });
+        this.refreshHud();
+        if ((GameState.get('hp') ?? 0) <= 0) {
+            this.time.delayedCall(100, () => this.scene.start('GameOverScene'));
+        }
+        if (receipt) {
+            receipt.selectedCategory = receipt.selectedCategory || null;
+        }
+    }
+
+    markReceiptRejected(receipt, stampText) {
+        receipt.rejected = true;
+        receipt.classified = true;
+        this.rejectedCount += 1;
+        this.processedCount += 1;
+        GameState.set('stage2CollectedCount', this.processedCount);
+        GameState.set('stage2SortedCount', this.registeredCount);
+        GameState.set('stage2CurrentReceiptLabel', receipt.title);
+        GameState.set('stage2CurrentReceiptCategory', '반려');
+        GameState.set('stage2PendingAssetRegistration', this.hasPendingAssetRegistration());
+        this.popupStampText.setText(stampText || '반려 완료');
+        this.popupMessageText.setText(chapter2Data.rejectLines[0].text);
+        this.finishReceiptAndAdvance(receipt);
+    }
+
+    markReceiptClassified(receipt) {
+        receipt.classified = true;
+        this.processedCount += 1;
+        GameState.set('stage2CollectedCount', this.processedCount);
+        GameState.set('stage2CurrentReceiptLabel', receipt.title);
+        GameState.set('stage2CurrentReceiptCategory', receipt.selectedCategory);
+
+        this.pendingPimsReceipts.push(receipt);
+        GameState.set('stage2PendingAssetRegistration', this.hasPendingAssetRegistration());
+
+        this.popupStampText.setText('분류 완료');
+        this.popupMessageText.setText(this.getSuccessMessageForReceipt(receipt));
+
+        if (!this.bonusTriggered && this.processedCount >= 4 && this.bonusQueue.length > 0) {
+            this.triggerBonusWave();
+        }
+
+        this.finishReceiptAndAdvance(receipt);
+    }
+
+    getSuccessMessageForReceipt(receipt) {
+        if (!receipt) {
+            return '';
+        }
+
+        if (receipt.asset) {
+            return '자산취득비는 PIMS 자산등록 후 분류 완료할 수 있습니다.';
+        }
+
+        if (receipt.correctCategory === '사업추진비') {
+            const amount = moneyToNumber(receipt.amount);
+            if (amount >= 500000) {
+                return '회의비는 회의록, 참여명단, 서명 증빙까지 모두 확인해야 합니다.';
+            }
+            return '회의비는 회의록을 첨부해야 합니다.';
+        }
+
+        if (receipt.correctCategory === '반려') {
+            return '반려 대상은 PIMS 등록에서 제외됩니다.';
+        }
+
+        return `${receipt.correctCategory}로 분류했습니다.`;
+    }
+
+    finishReceiptAndAdvance(receipt) {
+        this.updateReceiptState();
+        this.time.delayedCall(380, () => {
+            receipt?.destroy?.();
+            this.receiptQueue.shift();
+            if (this.receiptQueue.length === 0) {
+                this.finishPopupAndResume();
+                this.enterPimsApproachPhase();
+                return;
+            }
+            this.refreshClassificationPopup();
+        });
+    }
+
+    enterPimsApproachPhase() {
+        if (this.stageResolved) {
+            return;
+        }
+
+        this.stagePhase = 'pimsApproach';
+        GameState.set('stage2Phase', 'pimsApproach');
+        GameState.setTimeRunning(true);
+        this.bottomHud.setInteractionVisible(true);
+        this.bottomHud.setInteractionPrompt(chapter2Data.pimsHint);
+        this.refreshHud();
+        this.dialogue.say(chapter2Data.registrationPromptLines);
+    }
+
+    triggerBonusWave() {
+        this.bonusTriggered = true;
+        if (this.bonusQueue.length) {
+            this.receiptQueue.push(...this.bonusQueue);
+            this.bonusQueue = [];
+        }
+        this.showPopupNotice(chapter2Data.bonusWaveLines.map((line) => line.text).join('\n'), 0xffd36e);
     }
 
     updateReceiptState() {
-        const current = this.receiptQueue[0] || null;
-        GameState.set('stage2CollectedCount', this.collectedCount);
-        GameState.set('stage2SortedCount', this.sortedCount);
-        GameState.set('stage2CurrentReceiptLabel', current?.label || '');
-        GameState.set('stage2CurrentReceiptCategory', current?.category || '');
-        GameState.set('stage2PendingAssetRegistration', Boolean(current && current.asset && !current.registered));
-        GameState.set('executionRate', Math.min(100, Math.round((this.sortedCount / chapter2Data.receiptPool.length) * 100)));
+        const current = this.getCurrentReceipt();
+        GameState.set('stage2CollectedCount', this.processedCount);
+        GameState.set('stage2SortedCount', this.registeredCount);
+        GameState.set('stage2CurrentReceiptLabel', current?.title || '');
+        GameState.set('stage2CurrentReceiptCategory', current?.selectedCategory || current?.correctCategory || '');
+        GameState.set('stage2PendingAssetRegistration', this.hasPendingAssetRegistration());
+        GameState.set('executionRate', Math.min(100, Math.round((this.registeredCount / RECEIPT_TOTAL) * 100)));
         this.bottomHud?.refresh();
         this.topHud?.refresh();
-        this.refreshReceiptPanel();
-        this.scheduleAssetReminder();
+        this.refreshHud();
     }
 
-    refreshReceiptPanel() {
-        const current = this.receiptQueue[0] || null;
-        const phase = this.stagePhase;
-        if (phase === 'collect') {
-            this.receiptPanel?.setVisible(false);
-            this.receiptTitle?.setVisible(false);
-            this.receiptLabel?.setVisible(false);
-            this.receiptMeta?.setVisible(false);
+    hasPendingAssetRegistration() {
+        return this.pendingPimsReceipts.some((receipt) => receipt.asset && !receipt.assetRegistered);
+    }
+
+    openRegistrationPopup() {
+        if (this.stageResolved) {
             return;
         }
 
-        if (phase !== 'sort') {
-            this.receiptPanel?.setVisible(false);
-            this.receiptTitle?.setVisible(false);
-            this.receiptLabel?.setVisible(false);
-            this.receiptMeta?.setVisible(false);
+        if (!this.receipts.every((receipt) => receipt.classified)) {
+            this.showPopupNotice('아직 분류되지 않은 영수증이 있습니다.', 0xffd36e);
             return;
         }
 
-        this.receiptPanel?.setVisible(true);
-        this.receiptTitle?.setVisible(true);
-        this.receiptLabel?.setVisible(true);
-        this.receiptMeta?.setVisible(true);
+        this.clearActionPanel();
+        this.setHudVisible(false);
+        this.popupMode = 'registration';
+        this.stagePhase = 'registration';
+        GameState.set('stage2Phase', 'registration');
+        GameState.setTimeRunning(false);
+        this.clearPopup();
+        this.createRegistrationPopup();
+        this.refreshRegistrationPopup();
+    }
 
-        if (!current) {
-            this.receiptLabel?.setText('대기 중');
-            this.receiptMeta?.setText(`수거 ${this.collectedCount}/${chapter2Data.receiptPool.length} · 분류 ${this.sortedCount}/${chapter2Data.receiptPool.length}`);
+    createRegistrationPopup() {
+        const overlay = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.72)
+            .setOrigin(0.5)
+            .setDepth(1000);
+        const panel = this.add.rectangle(CENTER_X, 320, 1040, 560, 0x0f1020, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x75f6ff, 0.45)
+            .setDepth(1001);
+        const title = this.add.text(CENTER_X, 50, 'PIMS 집행 등록', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '32px',
+            color: '#fff4c9',
+            stroke: '#2c1346',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(1002);
+        const infoText = this.add.text(64, 102, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '17px',
+            color: '#c9ffef',
+            wordWrap: { width: 920 },
+            lineSpacing: 6
+        }).setDepth(1002);
+        const listText = this.add.text(64, 150, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '17px',
+            color: '#f8f3ff',
+            wordWrap: { width: 540 },
+            lineSpacing: 8
+        }).setDepth(1002);
+        const statusText = this.add.text(630, 150, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '17px',
+            color: '#f8f3ff',
+            wordWrap: { width: 340 },
+            lineSpacing: 8
+        }).setDepth(1002);
+        const footerText = this.add.text(CENTER_X, 480, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            color: '#c9ffef',
+            align: 'center',
+            wordWrap: { width: 900 }
+        }).setOrigin(0.5).setDepth(1002);
+
+        this.popupContainer = this.add.container(0, 0).setDepth(1000);
+        this.popupContainer.add([overlay, panel, title, infoText, listText, statusText, footerText]);
+        this.popupNodes = [overlay, panel, title, infoText, listText, statusText, footerText];
+        this.registrationInfoText = infoText;
+        this.registrationListText = listText;
+        this.registrationStatusText = statusText;
+        this.registrationFooterText = footerText;
+        this.popupMessageText = footerText;
+
+        this.createButton(this.popupContainer, 286, 530, 'PIMS 자산등록', () => this.performAssetRegistration(), {
+            width: 220,
+            height: 50,
+            fontSize: 18,
+            depth: 1002
+        });
+        this.createButton(this.popupContainer, 540, 530, '전체 집행등록', () => this.performBatchRegistration(), {
+            width: 220,
+            height: 50,
+            fontSize: 18,
+            depth: 1002
+        });
+        this.createButton(this.popupContainer, 794, 530, '최종 등록 완료', () => this.finalizeRegistration(), {
+            width: 220,
+            height: 50,
+            fontSize: 18,
+            depth: 1002
+        });
+    }
+
+    refreshRegistrationPopup() {
+        if (!this.popupContainer || this.popupMode !== 'registration') {
             return;
         }
 
-        this.receiptLabel?.setText(current.label);
-        this.receiptMeta?.setText(this.buildReceiptDetailText(current));
+        const assetPending = this.pendingPimsReceipts.filter((receipt) => receipt.asset && !receipt.assetRegistered);
+        const pendingItems = this.pendingPimsReceipts.filter((receipt) => receipt.classified && !receipt.rejected);
+        const registeredItems = this.pendingPimsReceipts.filter((receipt) => receipt.registered);
 
+        this.registrationInfoText.setText([
+            `등록 대기 ${pendingItems.length}건 / 반려 ${this.rejectedCount}건`,
+            `집행률 ${GameState.get('executionRate')}%`,
+            `D-${this.timerDays}`
+        ].join('\n'));
+        this.registrationListText.setText(
+            pendingItems.length
+                ? pendingItems.map((receipt) => {
+                    const status = receipt.asset
+                        ? (receipt.assetRegistered ? '자산등록 완료' : '자산등록 필요')
+                        : (receipt.registered ? '집행등록 완료' : '등록 대기');
+                    return `- ${receipt.title} / ${receipt.correctCategory} / ${status}`;
+                }).join('\n')
+                : '등록 대기 목록이 없습니다.'
+        );
+        this.registrationStatusText.setText([
+            `자산등록 필요: ${assetPending.length}`,
+            `집행등록 완료: ${registeredItems.length}`,
+            `반려 제외: ${this.rejectedCount}`,
+            '',
+            assetPending.length ? '자산취득비는 먼저 자산등록하세요.' : '이제 전체 집행등록을 진행할 수 있습니다.'
+        ].join('\n'));
+        this.registrationFooterText.setText(
+            assetPending.length
+                ? chapter2Data.assetReminder
+                : '분류 완료한 영수증을 PIMS에 최종 등록하세요.'
+        );
+    }
+
+    performAssetRegistration() {
+        if (this.stageResolved || this.popupMode !== 'registration') {
+            return;
+        }
+
+        const assetReceipts = this.pendingPimsReceipts.filter((receipt) => receipt.asset && !receipt.assetRegistered);
+        if (!assetReceipts.length) {
+            this.showPopupNotice('자산등록 대상이 없습니다.', 0x75f6ff);
+            return;
+        }
+
+        assetReceipts.forEach((receipt) => {
+            receipt.assetRegistered = true;
+        });
+        this.assetRegistered = true;
+        GameState.set('stage2PendingAssetRegistration', false);
+        this.showPopupNotice(chapter2Data.assetRegistered, 0x75f6ff);
+        this.refreshRegistrationPopup();
+    }
+
+    performBatchRegistration() {
+        if (this.stageResolved || this.popupMode !== 'registration') {
+            return;
+        }
+
+        const assetPending = this.pendingPimsReceipts.filter((receipt) => receipt.asset && !receipt.assetRegistered);
+        if (assetPending.length) {
+            this.showPopupNotice(chapter2Data.assetReminder, 0xffd36e);
+            return;
+        }
+
+        this.pendingPimsReceipts.forEach((receipt) => {
+            if (!receipt.rejected) {
+                receipt.registered = true;
+            }
+        });
+        this.registeredCount = this.pendingPimsReceipts.filter((receipt) => receipt.registered).length;
+        GameState.set('stage2SortedCount', this.registeredCount);
+        GameState.set('executionRate', Math.min(100, Math.round((this.registeredCount / RECEIPT_TOTAL) * 100)));
+        this.showPopupNotice('전체 집행등록이 완료되었습니다.', 0xc9ffef);
+        this.refreshRegistrationPopup();
+    }
+
+    finalizeRegistration() {
+        if (this.stageResolved || this.popupMode !== 'registration') {
+            return;
+        }
+
+        const assetPending = this.pendingPimsReceipts.filter((receipt) => receipt.asset && !receipt.assetRegistered);
+        if (assetPending.length) {
+            this.showPopupNotice(chapter2Data.assetReminder, 0xffd36e);
+            return;
+        }
+
+        const pendingUnregistered = this.pendingPimsReceipts.filter((receipt) => !receipt.rejected && !receipt.registered);
+        if (pendingUnregistered.length) {
+            this.showPopupNotice('등록 대기 목록을 모두 처리해야 합니다.', 0xffd36e);
+            return;
+        }
+
+        this.registeredCount = this.pendingPimsReceipts.filter((receipt) => receipt.registered).length;
+        GameState.set('stage2SortedCount', this.registeredCount);
+        GameState.set('executionRate', Math.min(100, Math.round((this.registeredCount / RECEIPT_TOTAL) * 100)));
+        this.completeStage2();
+    }
+
+    showActionPanel({ title, hint, buttonLabel, onClick, color = 0xffd36e, x = chapter2Data.receiptPile.x + 92, y = chapter2Data.receiptPile.y - 10 }) {
+        this.clearActionPanel();
+        this.bottomHud.setInteractionVisible(false);
+        this.actionPanel = this.add.container(0, 0).setDepth(960);
+        const panelX = x;
+        const panelY = y;
+        const overlay = this.add.rectangle(panelX, panelY, 360, 132, 0x05050a, 0.92)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, color, 0.55);
+        const titleText = this.add.text(panelX, panelY - 35, title, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            color: '#fff5c7'
+        }).setOrigin(0.5);
+        const hintText = this.add.text(panelX, panelY - 2, hint, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '14px',
+            color: '#c9ffef',
+            align: 'center',
+            wordWrap: { width: 316 }
+        }).setOrigin(0.5);
+        this.actionPanel.add([overlay, titleText, hintText]);
+        this.createButton(this.actionPanel, panelX, panelY + 38, buttonLabel, onClick, {
+            width: 220,
+            height: 44,
+            fontSize: 17,
+            depth: 961
+        });
+    }
+
+    clearActionPanel() {
+        this.actionPanel?.destroy(true);
+        this.actionPanel = null;
+        this.bottomHud.setInteractionVisible(true);
+        this.bottomHud.refresh();
+    }
+
+    clearPopup() {
+        this.popupContainer?.destroy(true);
+        this.popupContainer = null;
+        this.popupNodes = [];
+        this.popupProgressText = null;
+        this.popupTimerText = null;
+        this.popupHpText = null;
+        this.popupSummaryText = null;
+        this.popupCardTitle = null;
+        this.popupCardBody = null;
+        this.popupStatusText = null;
+        this.popupStampText = null;
+        this.popupMessageText = null;
+        this.popupMode = null;
+    }
+
+    showPopupNotice(message, color = 0xc9ffef) {
+        if (!this.popupMessageText) {
+            this.showToast(message, color);
+            return;
+        }
+
+        this.popupMessageText.setColor(`#${color.toString(16).padStart(6, '0')}`);
+        this.popupMessageText.setText(message);
         this.tweens.add({
-            targets: this.receiptPanel,
-            scaleX: { from: 1, to: 1.02 },
-            scaleY: { from: 1, to: 1.02 },
+            targets: this.popupMessageText,
+            alpha: { from: 0.4, to: 1 },
             duration: 120,
             yoyo: true
         });
     }
 
-    buildReceiptDetailText(receipt) {
-        const lines = [
-            `사용 목적: ${receipt.purpose || '-'}`,
-            `금액: ${receipt.amount || '-'}`,
-            `사용처: ${receipt.place || '-'}`
-        ];
-        if (receipt.note) {
-            lines.push(`판단 포인트: ${receipt.note}`);
-        }
-        if (receipt.asset) {
-            lines.push(receipt.registered ? 'PIMS 등록 완료' : 'PIMS 등록 필요');
-        }
-        if (receipt.invalid) {
-            lines.push('반려 대상');
-        }
-        return lines.join('\n');
-    }
+    showToast(message, color = 0xc9ffef) {
+        this.toast?.destroy();
+        this.toast = this.add.text(CENTER_X, 440, message, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            color: '#f8f3ff',
+            stroke: '#000000',
+            strokeThickness: 4,
+            backgroundColor: '#05050a',
+            padding: { left: 12, right: 12, top: 6, bottom: 6 }
+        }).setOrigin(0.5).setDepth(95);
+        this.toast.setColor(`#${color.toString(16).padStart(6, '0')}`);
 
-    scheduleAssetReminder() {
-        this.assetReminderCall?.remove(false);
-        const current = this.receiptQueue[0];
-        if (!current || !current.asset || current.registered || this.stagePhase !== 'sort') {
-            return;
-        }
-
-        this.assetReminderCall = this.time.delayedCall(2400, () => {
-            if (this.stageResolved) {
-                return;
-            }
-            const active = this.receiptQueue[0];
-            if (active && active.asset && !active.registered && this.stagePhase === 'sort') {
-                this.showAssistantBark(chapter2Data.assetReminder, 2600);
-            }
+        this.tweens.add({
+            targets: this.toast,
+            alpha: { from: 1, to: 0 },
+            duration: 1400,
+            delay: 900,
+            onComplete: () => this.toast?.destroy()
         });
     }
 
-    handleBasketInteract(basket) {
-        if (this.stagePhase !== 'sort') {
-            this.showToast('먼저 영수증을 모두 모으세요.', 0xfff0a8);
-            return;
-        }
-
-        const current = this.receiptQueue[0];
-        if (!current) {
-            this.showToast('먼저 영수증을 골라야 합니다.', 0xfff0a8);
-            return;
-        }
-
-        if (basket.id === 'reject') {
-            if (current.invalid) {
-                this.completeReceiptSort(current);
-                return;
-            }
-            this.rejectReceipt(current, chapter2Data.rejectMessage);
-            return;
-        }
-
-        if (current.invalid) {
-            this.rejectReceipt(current, chapter2Data.rejectMessage);
-            return;
-        }
-
-        if (basket.id === 'asset') {
-            if (!current.asset) {
-                this.rejectReceipt(current, '이 영수증은 자산취득비가 아닙니다.');
-                return;
-            }
-            if (!current.registered) {
-                this.rejectReceipt(current, chapter2Data.assetReminder);
-                return;
-            }
-            this.completeReceiptSort(current);
-            return;
-        }
-
-        if (current.asset && !current.registered) {
-            this.rejectReceipt(current, chapter2Data.assetReminder);
-            return;
-        }
-
-        if (basket.category === current.category) {
-            this.completeReceiptSort(current);
-            return;
-        }
-
-        this.rejectReceipt(current, chapter2Data.rejectMessage);
+    getKeyboardAxis() {
+        return {
+            x: (this.cursors.left.isDown || this.wasd.A.isDown ? -1 : 0) + (this.cursors.right.isDown || this.wasd.D.isDown ? 1 : 0),
+            y: (this.cursors.up.isDown || this.wasd.W.isDown ? -1 : 0) + (this.cursors.down.isDown || this.wasd.S.isDown ? 1 : 0)
+        };
     }
 
-    handlePimsInteract() {
-        if (this.stagePhase !== 'sort') {
-            this.showToast('아직 영수증을 더 모아야 합니다.', 0xfff0a8);
-            return;
-        }
-
-        const current = this.receiptQueue[0];
-        if (!current) {
-            this.showToast('등록할 영수증이 없습니다.', 0xfff0a8);
-            return;
-        }
-
-        if (!current.asset) {
-            this.showToast('이 영수증은 자산취득비가 아닙니다.', 0xfff0a8);
-            return;
-        }
-
-        if (current.registered) {
-            this.showToast('이미 PIMS에 등록했습니다.', 0x75f6ff);
-            return;
-        }
-
-        current.registered = true;
-        this.showAssistantBark(chapter2Data.assetRegistered, 2400);
-        this.updateReceiptState();
+    clampToWalkable(x, y) {
+        const area = chapter2Data.walkableArea;
+        return {
+            x: Phaser.Math.Clamp(x, area.x, area.x + area.width),
+            y: Phaser.Math.Clamp(y, area.y, area.y + area.height)
+        };
     }
 
-    rejectReceipt(_receipt, message) {
-        GameState.decreaseHp(8);
-        if ((GameState.get('hp') ?? 0) <= 0) {
-            this.showToast('반려되었습니다. HP 0', 0xff6b7d);
-            this.time.delayedCall(100, () => {
-                this.scene.start('GameOverScene');
-            });
-            return;
-        }
-        this.showAssistantBark(message, 2200);
-        this.showToast('반려되었습니다. HP -1/4', 0xff6b7d);
+    clampPlayerToWalkable() {
+        const clamped = this.clampToWalkable(this.player.x, this.player.y);
+        this.player.setPosition(clamped.x, clamped.y);
+    }
+
+    finishPopupAndResume() {
+        this.clearPopup();
+        this.setHudVisible(true);
+        this.bottomHud.setInteractionVisible(true);
+        this.bottomHud.refresh();
+        GameState.setTimeRunning(true);
         this.refreshHud();
-    }
-
-    completeReceiptSort(receipt) {
-        this.receiptQueue.shift();
-        this.sortedCount += 1;
-        this.showToast('분류 완료!', 0x75f6ff);
-        this.updateReceiptState();
-        receipt?.destroy?.();
-        if (this.receiptQueue.length === 0 && this.sortedCount >= chapter2Data.receiptPool.length) {
-            this.completeStage2();
-        }
     }
 
     completeStage2() {
@@ -699,23 +1343,33 @@ export class ExecutionHouseScene extends Phaser.Scene {
         GameState.set('stage2Cleared', true);
         GameState.set('stage2Failed', false);
         GameState.set('timeRunning', false);
-        this.assetReminderCall?.remove(false);
+        GameState.set('executionRate', 100);
         this.timerLoop?.remove(false);
+        this.clearActionPanel();
+        this.clearPopup();
+        this.setHudVisible(false);
 
         this.showEndingScreen({
             title: '2단계 완료',
-            body: '모든 영수증을 수거하고 분류했습니다.\n집행의 집 정리를 마쳤습니다.',
-            primaryLabel: '처음으로 돌아가기',
-            primaryAction: () => {
+            body: '영수증 분류와 PIMS 등록까지 모두 마쳤습니다.\n집행 처리를 완료했습니다.',
+            primaryLabel: '3단계 시작',
+            primaryAction: () => this.scene.start('MiddleFerrisWheelScene'),
+            secondaryLabel: '처음으로 돌아가기',
+            secondaryAction: () => {
                 GameState.reset();
                 this.scene.start('StartScene');
             },
-            secondaryLabel: '다시 하기',
-            secondaryAction: () => {
+            tertiaryLabel: '다시 하기',
+            tertiaryAction: () => {
                 GameState.reset();
                 this.scene.start('ExecutionHouseScene');
             }
         });
+    }
+
+    setHudVisible(visible) {
+        this.topHud?.container?.setVisible(Boolean(visible));
+        this.bottomHud?.container?.setVisible(Boolean(visible));
     }
 
     failStage(message) {
@@ -727,8 +1381,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
         GameState.set('stage2Cleared', false);
         GameState.set('stage2Failed', true);
         GameState.set('timeRunning', false);
-        this.assetReminderCall?.remove(false);
         this.timerLoop?.remove(false);
+        this.clearActionPanel();
+        this.clearPopup();
+        this.setHudVisible(false);
+        this.bottomHud.setInteractionVisible(false);
 
         this.showEndingScreen({
             title: '시간 초과',
@@ -746,7 +1403,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         });
     }
 
-    showEndingScreen({ title, body, primaryLabel, primaryAction, secondaryLabel, secondaryAction }) {
+    showEndingScreen({ title, body, primaryLabel, primaryAction, secondaryLabel, secondaryAction, tertiaryLabel, tertiaryAction }) {
         this.endingOverlay = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.72)
             .setOrigin(0.5)
             .setDepth(100);
@@ -778,36 +1435,47 @@ export class ExecutionHouseScene extends Phaser.Scene {
             lineSpacing: 10
         }).setOrigin(0.5).setDepth(110);
 
-        this.createButton(440, 612, primaryLabel, primaryAction);
-        this.createButton(840, 612, secondaryLabel, secondaryAction);
+        if (tertiaryLabel && tertiaryAction) {
+            this.createButton(null, 320, 612, primaryLabel, primaryAction);
+            this.createButton(null, 640, 612, secondaryLabel, secondaryAction);
+            this.createButton(null, 960, 612, tertiaryLabel, tertiaryAction);
+            return;
+        }
+
+        this.createButton(null, 440, 612, primaryLabel, primaryAction);
+        this.createButton(null, 840, 612, secondaryLabel, secondaryAction);
     }
 
-    createButton(x, y, label, onClick) {
+    createButton(parent, x, y, label, onClick, options = {}) {
+        const width = options.width || 260;
+        const height = options.height || 56;
+        const fontSize = options.fontSize || 20;
+        const depth = options.depth || 110;
         let bg;
         let hoverBg = null;
+
         if (this.textures.exists('ui_button_normal')) {
-            bg = this.add.image(x, y, 'ui_button_normal').setDisplaySize(260, 56).setDepth(110);
+            bg = this.add.image(x, y, 'ui_button_normal').setDisplaySize(width, height).setDepth(depth);
             if (this.textures.exists('ui_button_hover')) {
-                hoverBg = this.add.image(x, y, 'ui_button_hover').setDisplaySize(260, 56).setVisible(false).setDepth(110);
+                hoverBg = this.add.image(x, y, 'ui_button_hover').setDisplaySize(width, height).setVisible(false).setDepth(depth);
             }
         } else {
-            bg = this.add.rectangle(x, y, 260, 56, 0x24183f, 1).setStrokeStyle(2, 0x75f6ff, 0.72).setDepth(110);
+            bg = this.add.rectangle(x, y, width, height, 0x24183f, 1).setStrokeStyle(2, 0x75f6ff, 0.72).setDepth(depth);
         }
 
         const text = this.add.text(x, y, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '20px',
+            fontSize: `${fontSize}px`,
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 4
-        }).setOrigin(0.5).setDepth(111);
+        }).setOrigin(0.5).setDepth(depth + 1);
 
-        const hit = this.add.rectangle(x, y, 260, 56, 0x000000, 0).setDepth(110).setInteractive({ useHandCursor: true });
+        const hit = this.add.rectangle(x, y, width, height, 0x000000, 0).setDepth(depth).setInteractive({ useHandCursor: true });
         const select = (_pointer, _localX, _localY, event) => {
             event?.stopPropagation?.();
             onClick?.();
         };
-
         hit.on('pointerover', () => {
             if (hoverBg) {
                 bg.setVisible(false);
@@ -826,109 +1494,64 @@ export class ExecutionHouseScene extends Phaser.Scene {
         });
         hit.on('pointerdown', select);
         text.setInteractive({ useHandCursor: true }).on('pointerdown', select);
-    }
+        bg.setInteractive?.({ useHandCursor: true }).on('pointerdown', select);
+        hoverBg?.setInteractive?.({ useHandCursor: true }).on('pointerdown', select);
 
-    showAssistantBark(message, duration = 1800) {
-        this.assistantBark?.destroy();
-        this.assistantBark = this.add.text(
-            chapter2Data.assistant.x + 22,
-            chapter2Data.assistant.y - chapter2Data.assistant.height / 2 - 28,
-            message,
-            {
-                fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '15px',
-                color: '#f8f3ff',
-                backgroundColor: '#120c22',
-                padding: { left: 8, right: 8, top: 5, bottom: 5 },
-                wordWrap: { width: 250 }
+        let enabled = true;
+        const nodes = [bg, hoverBg, text, hit].filter(Boolean);
+        if (parent?.add) {
+            parent.add(nodes);
+        }
+
+        return {
+            bg,
+            hoverBg,
+            text,
+            hit,
+            nodes,
+            setEnabled: (nextEnabled) => {
+                enabled = Boolean(nextEnabled);
+                if (enabled) {
+                    hit?.setInteractive?.({ useHandCursor: true });
+                    bg?.setAlpha?.(1);
+                    hoverBg?.setAlpha?.(1);
+                    text?.setAlpha?.(1);
+                } else {
+                    hit?.disableInteractive?.();
+                    bg?.setAlpha?.(0.42);
+                    hoverBg?.setAlpha?.(0.42);
+                    text?.setAlpha?.(0.56);
+                    hoverBg?.setVisible?.(false);
+                }
+            },
+            setSelected: (selected) => {
+                if (!enabled) {
+                    return;
+                }
+                if (selected) {
+                    if (bg?.setTint) {
+                        bg.setTint(0xdbe9ff);
+                    }
+                    if (hoverBg?.setTint) {
+                        hoverBg.setTint(0xdbe9ff);
+                    }
+                    text?.setColor?.('#1b2140');
+                } else {
+                    if (bg?.clearTint) {
+                        bg.clearTint();
+                    }
+                    if (hoverBg?.clearTint) {
+                        hoverBg.clearTint();
+                    }
+                    text?.setColor?.('#ffffff');
+                }
             }
-        ).setOrigin(0.5, 1).setDepth(90);
-
-        this.tweens.add({
-            targets: this.assistantBark,
-            alpha: { from: 1, to: 0 },
-            duration,
-            delay: 1000,
-            onComplete: () => this.assistantBark?.destroy()
-        });
-    }
-
-    showToast(message, color = 0xc9ffef) {
-        this.toast?.destroy();
-        this.toast = this.add.text(CENTER_X, 440, message, {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#f8f3ff',
-            stroke: '#000000',
-            strokeThickness: 4,
-            backgroundColor: '#05050a',
-            padding: { left: 12, right: 12, top: 6, bottom: 6 }
-        }).setOrigin(0.5).setDepth(95);
-        this.toast.setColor(`#${color.toString(16).padStart(6, '0')}`);
-
-        this.tweens.add({
-            targets: this.toast,
-            alpha: { from: 1, to: 0 },
-            duration: 1400,
-            delay: 900,
-            onComplete: () => this.toast?.destroy()
-        });
-    }
-
-    handlePointerDown(pointer) {
-        if (this.dialogue.isActive || this.stageResolved) {
-            return;
-        }
-
-        const worldBottom = chapter2Data.walkableArea.y + chapter2Data.walkableArea.height;
-        if (pointer.y < 136 || pointer.y > worldBottom) {
-            return;
-        }
-
-        this.clickTarget = this.clampToWalkable(pointer.x, pointer.y);
-    }
-
-    tryInteract() {
-        if (!this.dialogue.isActive) {
-            this.interaction.interact();
-        }
-    }
-
-    getKeyboardAxis() {
-        return {
-            x: (this.cursors.left.isDown || this.wasd.A.isDown ? -1 : 0) + (this.cursors.right.isDown || this.wasd.D.isDown ? 1 : 0),
-            y: (this.cursors.up.isDown || this.wasd.W.isDown ? -1 : 0) + (this.cursors.down.isDown || this.wasd.S.isDown ? 1 : 0)
         };
-    }
-
-    moveTowardClickTarget() {
-        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.clickTarget.x, this.clickTarget.y);
-        if (distance < 4) {
-            this.clickTarget = null;
-            this.player.setMovement(0, 0);
-            return;
-        }
-
-        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.clickTarget.x, this.clickTarget.y);
-        this.player.setMovement(Math.cos(angle) * this.player.speed, Math.sin(angle) * this.player.speed);
-    }
-
-    clampToWalkable(x, y) {
-        const area = chapter2Data.walkableArea;
-        return {
-            x: Phaser.Math.Clamp(x, area.x, area.x + area.width),
-            y: Phaser.Math.Clamp(y, area.y, area.y + area.height)
-        };
-    }
-
-    clampPlayerToWalkable() {
-        const clamped = this.clampToWalkable(this.player.x, this.player.y);
-        this.player.setPosition(clamped.x, clamped.y);
     }
 
     refreshHud() {
         this.topHud.refresh();
         this.bottomHud.refresh();
-        this.refreshReceiptPanel();
     }
 }
+

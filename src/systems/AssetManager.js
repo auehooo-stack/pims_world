@@ -61,6 +61,7 @@ export const ASSETS = {
         dialogPortraitFrame: image('ui_dialog_portrait_frame', '/assets/ui/dialog/portraitFrame.png'),
         dialogPortraitKcaAssistant: image('ui_dialog_portrait_kca_assistant', '/assets/ui/dialog/characters/kca_assistant.png'),
         dialogPortraitKimDaeri: image('ui_dialog_portrait_kim_daeri', '/assets/ui/dialog/characters/kim_daeri.png'),
+        dialogPortraitPimsWorld: image('ui_dialog_portrait_pims_world', '/assets/ui/dialog/characters/pims_world.png'),
         hudPanel: image('ui_hud_panel', '/assets/ui/hud_panel.png'),
         objectiveBar: image('ui_objective_bar', '/assets/ui/objective_bar.png'),
         interactionPanel: image('ui_interaction_panel', '/assets/ui/bottom/interaction_panel.png'),

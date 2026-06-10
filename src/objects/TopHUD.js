@@ -28,7 +28,7 @@ export class TopHUD {
             this.container.add(
                 this.scene.add.image(GAME_WIDTH / 2, HUD_HEIGHT / 2, ASSETS.ui.hudPanel.key)
                     .setDisplaySize(GAME_WIDTH, HUD_HEIGHT)
-                    .setAlpha(0.16)
+                    .setAlpha(0.82)
             );
         }
     }
@@ -252,7 +252,10 @@ export class TopHUD {
     }
 
     refresh() {
-        this.stageBox.text?.setText(GameState.get('currentChapter') === 2 ? '2단계: 집행의 집' : '1단계: 봉인된 금고');
+        const chapter = GameState.get('currentChapter');
+        this.stageBox.text?.setText(
+            chapter === 3 ? '3단계: 중간 관람차' : chapter === 2 ? '2단계: 집행의 집' : '1단계: 봉인된 금고'
+        );
         this.dateMetric?.valueText?.setText(GameState.formatCurrentDate());
         this.updateHeartDisplay();
         this.executionMetric?.valueText?.setText(this.getExecutionDisplay());
