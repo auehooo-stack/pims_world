@@ -16,6 +16,7 @@ export class InteractableObject {
         this.assistantOpenTextureKey = this.isAssistant ? ASSETS.characters.kcaAssistantIdle.key : null;
         this.assistantClosedTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantClosed.key : null;
         this.hideVisuals = Boolean(config.hideVisuals);
+        this.labelOnly = Boolean(config.labelOnly);
         this.imageAlpha = typeof config.imageAlpha === 'number' ? config.imageAlpha : 1;
         setLinearTextureFilter(scene, this.textureKey);
         if (this.assistantOpenTextureKey) {
@@ -30,35 +31,27 @@ export class InteractableObject {
         this.shadow = scene.add.ellipse(0, config.height / 2 - 2, config.width * (this.isVault ? 0.9 : 0.82), this.isVault ? 14 : 12, 0x000000, this.isVault ? 0.24 : 0.3)
             .setScale(1, 0.8)
             .setDepth(1);
-        const bodyColor = this.isVault ? 0x17142a : config.color;
-        const bodyAlpha = this.isVault ? 0.2 : 1;
+        const bodyColor = this.isVault ? 0x000000 : config.color;
+        const bodyAlpha = this.isVault ? 0 : 1;
         this.body = scene.add.rectangle(0, 0, config.width, config.height, bodyColor, bodyAlpha)
-            .setStrokeStyle(this.isVault ? 1 : 2, this.isVault ? 0xd8c48b : 0xffffff, this.isVault ? 0.18 : 0.35);
+            .setStrokeStyle(this.isVault ? 0 : 2, this.isVault ? 0xf0dd9c : 0xffffff, this.isVault ? 0 : 0.35);
         const labelOffset = this.isVault ? 12 : 10;
         const labelY = config.height / 2 + labelOffset;
         this.label = scene.add.text(0, labelY, config.name, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: this.isVault ? '#ffe8a8' : '#f6f0ff',
-            backgroundColor: this.isVault ? '#1a1830' : '#120c22'
+            backgroundColor: 'rgba(18, 12, 34, 0.45)'
         }).setOrigin(0.5);
 
         this.container.add([this.shadow, this.body]);
 
-        if (this.isVault) {
-            this.wallAccent = scene.add.rectangle(0, -config.height * 0.08, config.width * 0.72, 8, 0xfff0c8, 0.08);
-            this.leftSeam = scene.add.rectangle(-config.width * 0.16, 0, 2, config.height - 28, 0xfff0c8, 0.08);
-            this.rightSeam = scene.add.rectangle(config.width * 0.18, 0, 2, config.height - 20, 0xfff0c8, 0.08);
-            this.container.add([this.wallAccent, this.leftSeam, this.rightSeam]);
-        }
-
         if (this.hideVisuals) {
             this.shadow.setVisible(false);
             this.body.setVisible(false);
-            this.label.setVisible(false);
-            this.wallAccent?.setVisible(false);
-            this.leftSeam?.setVisible(false);
-            this.rightSeam?.setVisible(false);
+            if (!this.labelOnly) {
+                this.label.setVisible(false);
+            }
         }
 
         if (this.textureKey && hasTexture(scene, this.textureKey)) {
@@ -66,7 +59,7 @@ export class InteractableObject {
             this.image.setDisplaySize(config.width, config.height);
             this.image.setAlpha(this.imageAlpha);
             this.image.disableInteractive?.();
-            this.body.setAlpha(0);
+            this.body.setVisible(false);
             this.container.add(this.image);
             if (this.hideVisuals) {
                 this.image.setVisible(false);
@@ -157,9 +150,6 @@ export class InteractableObject {
         this.label?.destroy();
         this.body?.destroy();
         this.shadow?.destroy();
-        this.wallAccent?.destroy();
-        this.leftSeam?.destroy();
-        this.rightSeam?.destroy();
         this.container?.destroy();
     }
 }

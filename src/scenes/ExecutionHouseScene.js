@@ -18,6 +18,28 @@ const HP_LOSS = 8;
 
 const CATEGORY_ORDER = ['운영비', '사업추진비', '여비', '자산취득비', '반려'];
 const EVIDENCE_KEYS = ['minutes', 'participants', 'signature', 'asset'];
+const EXTRA_ACTION_ORDER = ['minutes', 'participants', 'signature', 'asset', 'none'];
+const CLASSIFICATION_LAYOUT = {
+    backdrop: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, width: GAME_WIDTH, height: GAME_HEIGHT },
+    title: { x: CENTER_X, y: 40 },
+    topRowY: 78,
+    leftPanel: { x: 60, y: 115, width: 570, height: 350 },
+    rightPanel: { x: 670, y: 115, width: 550, height: 350 },
+    cardTitle: { x: 84, y: 150 },
+    cardBody: { x: 84, y: 190, width: 500 },
+    statusTitle: { x: 700, y: 150 },
+    statusText: { x: 700, y: 180, width: 248 },
+    stamp: { x: 1120, y: 205 },
+    checklistTitle: { x: 700, y: 240 },
+    checklistNote: { x: 700, y: 266, width: 250 },
+    checklistStartY: 300,
+    checklistGapY: 32,
+    categoryLabelY: 500,
+    categoryButtonsY: 530,
+    actionLabelY: 606,
+    actionButtonsY: 635,
+    feedback: { x: CENTER_X, y: 575, width: 1160 }
+};
 
 const moneyToNumber = (value) => {
     const digits = String(value || '').replace(/[^\d]/g, '');
@@ -462,14 +484,26 @@ export class ExecutionHouseScene extends Phaser.Scene {
     }
 
     createClassificationPopup() {
-        const overlay = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.64)
+        const layout = CLASSIFICATION_LAYOUT;
+        const backdrop = this.add.rectangle(layout.backdrop.x, layout.backdrop.y, layout.backdrop.width, layout.backdrop.height, 0x050816, 0.96)
             .setOrigin(0.5)
             .setDepth(1000);
-        const panel = this.add.rectangle(CENTER_X, 312, 1184, 600, 0x0f1020, 0.96)
+        const topBand = this.add.rectangle(layout.backdrop.x, 36, GAME_WIDTH, 88, 0x091022, 0.92)
             .setOrigin(0.5)
-            .setStrokeStyle(2, 0x75f6ff, 0.42)
             .setDepth(1001);
-        const title = this.add.text(CENTER_X, 34, '영수증 폭풍 : 비세목 분류 대작전', {
+        const leftPanel = this.add.rectangle(layout.leftPanel.x + layout.leftPanel.width / 2, layout.leftPanel.y + layout.leftPanel.height / 2, layout.leftPanel.width, layout.leftPanel.height, 0x11172a, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0xffd36e, 0.34)
+            .setDepth(1001);
+        const rightPanel = this.add.rectangle(layout.rightPanel.x + layout.rightPanel.width / 2, layout.rightPanel.y + layout.rightPanel.height / 2, layout.rightPanel.width, layout.rightPanel.height, 0x11172a, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x75f6ff, 0.34)
+            .setDepth(1001);
+        const bottomBand = this.add.rectangle(layout.backdrop.x, layout.feedback.y, layout.feedback.width, 52, 0x05050a, 0.78)
+            .setOrigin(0.5)
+            .setStrokeStyle(1, 0x2be8ff, 0.22)
+            .setDepth(1001);
+        const title = this.add.text(layout.title.x, layout.title.y, '영수증 폭풍 : 비세목 분류 대작전', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '32px',
             color: '#fff4c9',
@@ -477,96 +511,106 @@ export class ExecutionHouseScene extends Phaser.Scene {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(1002);
 
-        const progressText = this.add.text(54, 82, '', {
+        const progressText = this.add.text(54, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef'
         }).setDepth(1002);
-        const timerText = this.add.text(260, 82, '', {
+        const timerText = this.add.text(260, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff5c7'
         }).setDepth(1002);
-        const hpText = this.add.text(470, 82, '', {
+        const hpText = this.add.text(470, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#ffd36e'
         }).setDepth(1002);
-        const summaryText = this.add.text(675, 82, '', {
+        const summaryText = this.add.text(675, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef'
         }).setDepth(1002);
 
-        const cardPanel = this.add.rectangle(304, 210, 520, 320, 0x11172a, 0.96)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, 0xffd36e, 0.36)
-            .setDepth(1001);
-        const cardTitle = this.add.text(84, 120, '', {
+        const cardTitle = this.add.text(layout.cardTitle.x, layout.cardTitle.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#fff5c7'
         }).setDepth(1002);
-        const cardBody = this.add.text(84, 160, '', {
+        const cardBody = this.add.text(layout.cardBody.x, layout.cardBody.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
             color: '#f8f3ff',
-            wordWrap: { width: 430 },
+            wordWrap: { width: layout.cardBody.width },
             lineSpacing: 8
         }).setDepth(1002);
 
-        const infoPanel = this.add.rectangle(848, 210, 300, 320, 0x11172a, 0.96)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, 0x75f6ff, 0.36)
-            .setDepth(1001);
-        const statusTitle = this.add.text(702, 120, '처리 상태', {
+        const statusTitle = this.add.text(layout.statusTitle.x, layout.statusTitle.y, '처리 상태', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
             color: '#c9ffef'
         }).setDepth(1002);
-        const statusText = this.add.text(702, 160, '', {
+        const statusText = this.add.text(layout.statusText.x, layout.statusText.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#f8f3ff',
-            wordWrap: { width: 252 },
+            wordWrap: { width: layout.statusText.width },
             lineSpacing: 8
         }).setDepth(1002);
-        const stampText = this.add.text(870, 330, '', {
+        const stampText = this.add.text(layout.stamp.x, layout.stamp.y, '', {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '28px',
+            fontSize: '26px',
             color: '#ffd36e',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 4,
+            align: 'center'
         }).setOrigin(0.5).setDepth(1002);
 
-        const messageText = this.add.text(CENTER_X, 500, '', {
+        const checklistTitle = this.add.text(layout.checklistTitle.x, layout.checklistTitle.y, '필요 추가 처리', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
+            fontSize: '16px',
+            color: '#c9ffef'
+        }).setDepth(1002);
+        const checklistNote = this.add.text(layout.checklistNote.x, layout.checklistNote.y, '추가 처리 항목을 선택하세요.', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '15px',
+            color: '#f8f3ff',
+            wordWrap: { width: layout.checklistNote.width },
+            lineSpacing: 6
+        }).setDepth(1002);
+
+        const messageText = this.add.text(layout.feedback.x, layout.feedback.y, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
             color: '#c9ffef',
-            wordWrap: { width: 1000 },
-            align: 'center'
+            align: 'center',
+            wordWrap: { width: 1100 },
+            lineSpacing: 4
         }).setOrigin(0.5).setDepth(1002);
 
         this.popupContainer = this.add.container(0, 0).setDepth(1000);
         this.popupContainer.add([
-            overlay,
-            panel,
+            backdrop,
+            topBand,
+            leftPanel,
+            rightPanel,
+            bottomBand,
             title,
             progressText,
             timerText,
             hpText,
             summaryText,
-            cardPanel,
             cardTitle,
             cardBody,
-            infoPanel,
             statusTitle,
             statusText,
             stampText,
+            checklistTitle,
+            checklistNote,
             messageText
         ]);
 
-        this.popupNodes = [overlay, panel, title, progressText, timerText, hpText, summaryText, cardPanel, cardTitle, cardBody, infoPanel, statusTitle, statusText, stampText, messageText];
+        this.popupNodes = [backdrop, topBand, leftPanel, rightPanel, bottomBand, title, progressText, timerText, hpText, summaryText, cardTitle, cardBody, statusTitle, statusText, stampText, checklistTitle, checklistNote, messageText];
         this.popupProgressText = progressText;
         this.popupTimerText = timerText;
         this.popupHpText = hpText;
@@ -576,24 +620,19 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.popupStatusText = statusText;
         this.popupStampText = stampText;
         this.popupMessageText = messageText;
+        this.popupChecklistNote = checklistNote;
 
         this.classificationCategoryButtons = [];
-        this.classificationEvidenceButtons = [];
         this.classificationActionButtons = {};
+        this.classificationChecklistRows = {};
 
-        this.add.text(92, 356, '1. 비세목 선택', {
+        this.add.text(92, layout.categoryLabelY, '1. 비세목 선택', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff4c9'
         }).setDepth(1002);
-        [
-            '운영비',
-            '사업추진비',
-            '여비',
-            '자산취득비',
-            '반려'
-        ].forEach((label, index) => {
-            const button = this.createButton(this.popupContainer, 92 + index * 212, 392, label, () => this.selectCategory(label), {
+        CATEGORY_ORDER.forEach((label, index) => {
+            const button = this.createButton(this.popupContainer, 92 + index * 212, layout.categoryButtonsY, label, () => this.selectCategory(label), {
                 width: 194,
                 height: 46,
                 fontSize: 18,
@@ -602,51 +641,52 @@ export class ExecutionHouseScene extends Phaser.Scene {
             this.classificationCategoryButtons.push({ label, ...button });
         });
 
-        this.add.text(92, 438, '2. 추가 처리', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
-            color: '#c9ffef'
-        }).setDepth(1002);
-        [
-            { key: 'minutes', label: '회의록 첨부' },
-            { key: 'participants', label: '참여명단 첨부' },
-            { key: 'signature', label: '서명 증빙 첨부' },
-            { key: 'asset', label: 'PIMS 자산등록' }
-        ].forEach((entry, index) => {
-            const button = this.createButton(this.popupContainer, 92 + index * 212, 474, entry.label, entry.key === 'asset'
-                ? () => this.registerAssetCurrentReceipt()
-                : () => this.toggleEvidence(entry.key), {
-                width: 194,
-                height: 44,
-                fontSize: 16,
-                depth: 1002
-            });
-            this.classificationEvidenceButtons.push({ key: entry.key, label: entry.label, ...button });
+        this.classificationChecklistRows.minutes = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY, '회의록 첨부', () => this.toggleEvidence('minutes'), {
+            width: 260,
+            depth: 1002
+        });
+        this.classificationChecklistRows.participants = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY, '참여명단 첨부', () => this.toggleEvidence('participants'), {
+            width: 260,
+            depth: 1002
+        });
+        this.classificationChecklistRows.signature = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 2, '서명 증빙 첨부', () => this.toggleEvidence('signature'), {
+            width: 260,
+            depth: 1002
+        });
+        this.classificationChecklistRows.asset = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 3, 'PIMS 자산등록', () => this.toggleEvidence('asset'), {
+            width: 260,
+            depth: 1002
+        });
+        this.classificationChecklistRows.none = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 4, '추가 증빙 없음', () => this.toggleEvidence('none'), {
+            width: 260,
+            depth: 1002
         });
 
-        this.add.text(92, 522, '3. 처리', {
+        this.classificationActionLabel = this.add.text(92, layout.actionLabelY, '2. 처리', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff5c7'
         }).setDepth(1002);
-        this.classificationActionButtons.complete = this.createButton(this.popupContainer, 300, 560, '분류 완료', () => this.completeCurrentReceipt(), {
+        this.classificationActionButtons.complete = this.createButton(this.popupContainer, 300, layout.actionButtonsY, '분류 완료', () => this.completeCurrentReceipt(), {
             width: 240,
             height: 52,
             fontSize: 19,
             depth: 1002
         });
-        this.classificationActionButtons.reject = this.createButton(this.popupContainer, 580, 560, '반려 처리', () => this.rejectCurrentReceipt(), {
+        this.classificationActionButtons.reject = this.createButton(this.popupContainer, 580, layout.actionButtonsY, '반려 처리', () => this.rejectCurrentReceipt(), {
             width: 240,
             height: 52,
             fontSize: 19,
             depth: 1002
         });
-        this.classificationActionButtons.refresh = this.createButton(this.popupContainer, 860, 560, '다시 보기', () => this.refreshClassificationPopup(), {
+        this.classificationActionButtons.refresh = this.createButton(this.popupContainer, 860, layout.actionButtonsY, '다시 보기', () => this.refreshClassificationPopup(), {
             width: 240,
             height: 52,
             fontSize: 19,
             depth: 1002
         });
+
+        this.classificationActionLabel?.setVisible?.(true);
     }
 
     refreshClassificationPopup() {
@@ -681,14 +721,10 @@ export class ExecutionHouseScene extends Phaser.Scene {
             `사용 목적: ${receipt.purpose}`,
             `집행일: ${receipt.expenseDate}`,
             `사용 시간: ${receipt.useTime}`,
-            `금액: ${receipt.amount}`,
-            `특이사항: ${receipt.note || '-'}`,
-            '',
-            `정답 비세목: ${receipt.correctCategory}`,
-            `필수 증빙: ${this.getReceiptRequirementSummary(receipt)}`
+            `금액: ${receipt.amount}`
         ].join('\n'));
         this.popupStampText.setText(receipt.rejected ? '반려 완료' : receipt.classified ? '분류 완료' : '');
-        this.popupMessageText.setText('영수증의 내용과 사용 목적을 보고 비세목을 판단하세요.');
+        this.popupMessageText.setText('영수증 정보를 보고 비세목과 추가 처리를 판단하세요.');
     }
 
     updateClassificationPopupControls(receipt) {
@@ -698,42 +734,80 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         const selected = receipt?.selectedCategory || '미선택';
         const amount = moneyToNumber(receipt?.amount);
-        const isPromotion = receipt?.correctCategory === '사업추진비' || selected === '사업추진비';
+        const isPromotion = selected === '사업추진비';
         const needsMeetingExtras = isPromotion && amount >= 500000;
-        const isAsset = receipt?.correctCategory === '자산취득비' || selected === '자산취득비';
+        const isAsset = selected === '자산취득비';
+        const isReject = selected === '반려';
+        const requiredActions = this.getRequiredExtraActions(receipt);
+        const registrationState = receipt?.rejected
+            ? '등록 제외'
+            : receipt?.asset
+                ? (receipt.assetRegistered ? '자산등록 완료' : '등록 대기')
+                : (receipt?.classified ? '등록 대기' : '-');
 
         this.classificationCategoryButtons?.forEach((entry) => {
             entry?.setEnabled?.(true);
-            entry?.setSelected?.(receipt?.selectedCategory === entry.label);
+            entry?.setSelected?.(selected === entry.label);
         });
 
-        this.classificationEvidenceButtons?.forEach((entry) => {
-            let enabled = false;
-            if (entry.key === 'minutes') {
-                enabled = isPromotion;
-            } else if (entry.key === 'participants' || entry.key === 'signature') {
-                enabled = needsMeetingExtras;
-            } else if (entry.key === 'asset') {
-                enabled = isAsset;
-            }
-            entry?.setEnabled?.(enabled);
+        Object.values(this.classificationChecklistRows || {}).forEach((row) => {
+            row?.setVisible?.(true);
+            row?.setEnabled?.(true);
+            row?.setChecked?.(false);
         });
 
-        this.classificationActionButtons?.complete?.setEnabled?.(Boolean(receipt?.selectedCategory));
+        let checklistNote = '추가 처리 항목을 선택하세요.';
+        if (!receipt) {
+            checklistNote = '비세목을 먼저 선택하세요.';
+        } else if (isReject) {
+            checklistNote = '반려 처리 대상입니다.';
+        } else if (selected === '미선택') {
+            checklistNote = '비세목을 먼저 선택하세요.';
+        } else {
+            checklistNote = '필요한 항목만 직접 선택하세요.';
+        }
+
+        if (this.popupChecklistNote) {
+            this.popupChecklistNote.setText(checklistNote);
+        }
+
+        const rows = this.classificationChecklistRows || {};
+        const showAll = Boolean(receipt);
+        if (showAll) {
+            rows.none?.setVisible?.(true);
+            rows.none?.setEnabled?.(selected !== '미선택');
+            rows.none?.setChecked?.(Boolean(receipt?.evidenceFlags.none));
+
+            rows.minutes?.setVisible?.(true);
+            rows.participants?.setVisible?.(true);
+            rows.signature?.setVisible?.(true);
+            rows.asset?.setVisible?.(true);
+
+            rows.minutes?.setEnabled?.(true);
+            rows.participants?.setEnabled?.(true);
+            rows.signature?.setEnabled?.(true);
+            rows.asset?.setEnabled?.(true);
+
+            rows.minutes?.setChecked?.(Boolean(receipt?.evidenceFlags.minutes));
+            rows.participants?.setChecked?.(Boolean(receipt?.evidenceFlags.participants));
+            rows.signature?.setChecked?.(Boolean(receipt?.evidenceFlags.signature));
+            rows.asset?.setChecked?.(Boolean(receipt?.assetRegistered));
+        }
+
+        this.classificationActionButtons?.complete?.setEnabled?.(Boolean(receipt && selected !== '미선택' && selected !== '반려'));
         this.classificationActionButtons?.reject?.setEnabled?.(true);
         this.classificationActionButtons?.refresh?.setEnabled?.(true);
 
         if (this.popupStatusText) {
-            const assetStatus = receipt?.asset ? (receipt.assetRegistered ? '✓' : '□') : '-';
-            const registrationState = receipt?.rejected ? '등록 제외' : '등록 대기';
             this.popupStatusText.setText([
                 `선택 비세목: ${selected}`,
-                `회의록: ${receipt?.evidenceFlags.minutes ? '✓' : '□'}`,
-                `참여명단: ${receipt?.evidenceFlags.participants ? '✓' : '□'}`,
-                `서명 증빙: ${receipt?.evidenceFlags.signature ? '✓' : '□'}`,
-                `PIMS 자산등록: ${assetStatus}`,
                 `PIMS 등록 상태: ${registrationState}`
             ].join('\n'));
+        }
+
+        if (this.popupMessageText && receipt) {
+            this.popupMessageText.setText('체크박스를 눌러 추가 처리 후 분류 완료를 누르세요.');
+            this.popupMessageText.setColor('#c9ffef');
         }
     }
 
@@ -754,15 +828,88 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return 'PIMS 자산등록 후 분류 완료';
         }
 
-        if (receipt.correctCategory === '사업추진비') {
-            const amount = moneyToNumber(receipt.amount);
-            if (amount >= 500000) {
-                return '회의록 + 참여명단 + 서명 증빙';
-            }
+        const requiredActions = this.getRequiredExtraActions(receipt);
+        if (!requiredActions.length || requiredActions.includes('none')) {
+            return '추가 증빙 없음';
+        }
+
+        if (requiredActions.includes('asset')) {
+            return 'PIMS 자산등록';
+        }
+
+        if (requiredActions.length >= 3) {
+            return '회의록 + 참여명단 + 서명 증빙';
+        }
+
+        if (requiredActions.includes('minutes')) {
             return '회의록 첨부';
         }
 
         return '기본 증빙 확인 후 분류';
+    }
+
+    getRequiredExtraActions(receipt) {
+        if (!receipt) {
+            return [];
+        }
+
+        if (Array.isArray(receipt.requiredExtraActions) && receipt.requiredExtraActions.length) {
+            return [...receipt.requiredExtraActions];
+        }
+
+        if (receipt.invalid || receipt.correctCategory === '반려') {
+            return [];
+        }
+
+        if (receipt.correctCategory === '자산취득비') {
+            return ['asset'];
+        }
+
+        if (receipt.correctCategory === '사업추진비') {
+            const amount = moneyToNumber(receipt.amount);
+            return amount >= 500000
+                ? ['minutes', 'participants', 'signature']
+                : ['minutes'];
+        }
+
+        return ['none'];
+    }
+
+    getSelectedExtraActions(receipt) {
+        if (!receipt) {
+            return [];
+        }
+
+        const selected = [];
+        if (receipt.evidenceFlags?.minutes) {
+            selected.push('minutes');
+        }
+        if (receipt.evidenceFlags?.participants) {
+            selected.push('participants');
+        }
+        if (receipt.evidenceFlags?.signature) {
+            selected.push('signature');
+        }
+        if (receipt.assetRegistered) {
+            selected.push('asset');
+        }
+        if (receipt.evidenceFlags?.none) {
+            selected.push('none');
+        }
+        return selected;
+    }
+
+    areActionsEqual(expected, actual) {
+        const expectedSet = [...new Set(expected || [])].sort((a, b) => EXTRA_ACTION_ORDER.indexOf(a) - EXTRA_ACTION_ORDER.indexOf(b));
+        const actualSet = [...new Set(actual || [])].sort((a, b) => EXTRA_ACTION_ORDER.indexOf(a) - EXTRA_ACTION_ORDER.indexOf(b));
+        if (expectedSet.length !== actualSet.length) {
+            return false;
+        }
+        return expectedSet.every((value, index) => value === actualSet[index]);
+    }
+
+    getExtraActionMismatchMessage(receipt, expected, actual) {
+        return '추가 처리 항목이 맞지 않습니다.';
     }
 
     selectCategory(category) {
@@ -771,6 +918,13 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
+        if (receipt.selectedCategory !== category) {
+            receipt.evidenceFlags.minutes = false;
+            receipt.evidenceFlags.participants = false;
+            receipt.evidenceFlags.signature = false;
+            receipt.assetRegistered = false;
+            receipt.evidenceFlags.none = false;
+        }
         receipt.selectedCategory = category;
         this.refreshClassificationPopup();
     }
@@ -781,45 +935,40 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
+        if (key === 'none') {
+            receipt.evidenceFlags.none = !receipt.evidenceFlags.none;
+            if (receipt.evidenceFlags.none) {
+                receipt.evidenceFlags.minutes = false;
+                receipt.evidenceFlags.participants = false;
+                receipt.evidenceFlags.signature = false;
+                receipt.assetRegistered = false;
+            }
+            this.refreshClassificationPopup();
+            return;
+        }
+
         if (key === 'asset') {
-            this.registerAssetCurrentReceipt();
+            receipt.assetRegistered = !receipt.assetRegistered;
+            if (receipt.assetRegistered) {
+                receipt.evidenceFlags.none = false;
+            }
+            this.refreshClassificationPopup();
             return;
         }
 
-        if (key !== 'minutes' && key !== 'participants' && key !== 'signature') {
-            return;
-        }
-
-        if (receipt.correctCategory !== '사업추진비') {
-            this.showPopupNotice('이 영수증에는 회의록이 필요하지 않습니다.', 0xffd36e);
-            return;
-        }
-
-        const amount = moneyToNumber(receipt.amount);
-        if ((key === 'participants' || key === 'signature') && amount < 500000) {
-            this.showPopupNotice('50만원 이상 사업추진비에서만 필요한 증빙입니다.', 0xffd36e);
+        if (!EVIDENCE_KEYS.includes(key)) {
             return;
         }
 
         receipt.evidenceFlags[key] = !receipt.evidenceFlags[key];
+        if (receipt.evidenceFlags[key]) {
+            receipt.evidenceFlags.none = false;
+        }
         this.refreshClassificationPopup();
     }
 
     registerAssetCurrentReceipt() {
-        const receipt = this.getCurrentReceipt();
-        if (!receipt || this.popupMode !== 'classification') {
-            return;
-        }
-
-        if (receipt.correctCategory !== '자산취득비') {
-            this.showPopupNotice('이 영수증은 자산취득비가 아니므로 자산등록이 필요하지 않습니다.', 0xffd36e);
-            return;
-        }
-
-        receipt.assetRegistered = true;
-        this.popupStampText.setText('PIMS 자산등록 O');
-        this.popupMessageText.setText('자산취득비 등록을 완료했습니다. 이제 분류 완료를 누르세요.');
-        this.refreshClassificationPopup();
+        this.toggleEvidence('asset');
     }
 
     completeCurrentReceipt() {
@@ -852,21 +1001,10 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        if (receipt.correctCategory === '사업추진비') {
-            const amount = moneyToNumber(receipt.amount);
-            const needParticipants = amount >= 500000;
-            if (!receipt.evidenceFlags.minutes) {
-                this.applyWrongAnswer('사업추진비 지출은 회의록 등 증빙이 필요합니다.', receipt);
-                return;
-            }
-            if (needParticipants && (!receipt.evidenceFlags.participants || !receipt.evidenceFlags.signature)) {
-                this.applyWrongAnswer('50만원 이상 회의비는 회의 참여명단 및 서명 증빙까지 확인해야 합니다.', receipt);
-                return;
-            }
-        }
-
-        if (receipt.correctCategory === '자산취득비' && !receipt.assetRegistered) {
-            this.applyWrongAnswer('자산취득비는 PIMS 자산등록 후 분류 완료할 수 있습니다.', receipt);
+        const requiredActions = this.getRequiredExtraActions(receipt);
+        const selectedActions = this.getSelectedExtraActions(receipt);
+        if (!this.areActionsEqual(requiredActions, selectedActions)) {
+            this.applyWrongAnswer(this.getExtraActionMismatchMessage(receipt, requiredActions, selectedActions), receipt);
             return;
         }
 
@@ -943,23 +1081,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return '';
         }
 
-        if (receipt.asset) {
-            return '자산취득비는 PIMS 자산등록 후 분류 완료할 수 있습니다.';
-        }
-
-        if (receipt.correctCategory === '사업추진비') {
-            const amount = moneyToNumber(receipt.amount);
-            if (amount >= 500000) {
-                return '회의비는 회의록, 참여명단, 서명 증빙까지 모두 확인해야 합니다.';
-            }
-            return '회의비는 회의록을 첨부해야 합니다.';
-        }
-
         if (receipt.correctCategory === '반려') {
-            return '반려 대상은 PIMS 등록에서 제외됩니다.';
+            return '반려 처리되었습니다.';
         }
 
-        return `${receipt.correctCategory}로 분류했습니다.`;
+        return '분류가 완료되었습니다.';
     }
 
     finishReceiptAndAdvance(receipt) {
@@ -1264,6 +1390,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.popupStatusText = null;
         this.popupStampText = null;
         this.popupMessageText = null;
+        this.popupChecklistNote = null;
         this.popupMode = null;
     }
 
@@ -1545,6 +1672,79 @@ export class ExecutionHouseScene extends Phaser.Scene {
                     }
                     text?.setColor?.('#ffffff');
                 }
+            }
+        };
+    }
+
+    createChecklistRow(parent, x, y, label, onClick, options = {}) {
+        const width = options.width || 246;
+        const depth = options.depth || 1002;
+        const row = this.add.container(x, y).setDepth(depth);
+        const box = this.add.rectangle(0, 0, 18, 18, 0x11172a, 1)
+            .setStrokeStyle(2, 0x75f6ff, 0.9);
+        const mark = this.add.text(0, 0, '', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff5c7',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        const text = this.add.text(26, 0, label, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '15px',
+            color: '#f8f3ff'
+        }).setOrigin(0, 0.5);
+        const hit = this.add.rectangle(width / 2, 0, width, 26, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
+
+        const select = (_pointer, _localX, _localY, event) => {
+            event?.stopPropagation?.();
+            onClick?.();
+        };
+
+        hit.on('pointerdown', select);
+
+        row.add([box, mark, text, hit]);
+        parent?.add?.(row);
+
+        let enabled = true;
+        let visible = true;
+
+        return {
+            row,
+            box,
+            mark,
+            text,
+            hit,
+            setEnabled(nextEnabled) {
+                enabled = Boolean(nextEnabled);
+                if (enabled) {
+                    hit.setInteractive({ useHandCursor: true });
+                    row.setAlpha(1);
+                } else {
+                    hit.disableInteractive();
+                    row.setAlpha(0.45);
+                }
+            },
+            setChecked(nextChecked) {
+                const checked = Boolean(nextChecked);
+                mark.setText(checked ? '✓' : '');
+                box.setFillStyle(checked ? 0x75f6ff : 0x11172a, checked ? 0.92 : 1);
+                text.setColor(checked ? '#fff5c7' : '#f8f3ff');
+                return checked;
+            },
+            setVisible(nextVisible) {
+                visible = Boolean(nextVisible);
+                row.setVisible(visible);
+            },
+            setLabel(nextLabel) {
+                text.setText(nextLabel);
+            },
+            isEnabled() {
+                return enabled;
+            },
+            isVisible() {
+                return visible;
             }
         };
     }

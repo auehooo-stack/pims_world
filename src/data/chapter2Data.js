@@ -60,7 +60,8 @@ export const chapter2Data = {
             amount: '38,000원',
             note: '소모성 사무용품은 자산취득비가 아닙니다.',
             correctCategory: '운영비',
-            evidence: []
+            evidence: [],
+            requiredExtraActions: ['none']
         },
         {
             id: 'r2',
@@ -72,7 +73,8 @@ export const chapter2Data = {
             amount: '82,000원',
             note: '회의비는 회의록이 필요합니다.',
             correctCategory: '사업추진비',
-            evidence: ['minutes']
+            evidence: ['minutes'],
+            requiredExtraActions: ['minutes']
         },
         {
             id: 'r3',
@@ -84,7 +86,8 @@ export const chapter2Data = {
             amount: '59,800원',
             note: '출장 이동에 따른 여비입니다.',
             correctCategory: '여비',
-            evidence: []
+            evidence: [],
+            requiredExtraActions: ['none']
         },
         {
             id: 'r4',
@@ -97,7 +100,8 @@ export const chapter2Data = {
             note: '자산취득비는 PIMS 자산등록이 필요합니다.',
             correctCategory: '자산취득비',
             evidence: [],
-            asset: true
+            asset: true,
+            requiredExtraActions: ['asset']
         },
         {
             id: 'r5',
@@ -109,7 +113,8 @@ export const chapter2Data = {
             amount: '12,000원',
             note: '사업 목적과 관련 없는 개인성 지출입니다.',
             correctCategory: '반려',
-            invalid: true
+            invalid: true,
+            requiredExtraActions: []
         },
         {
             id: 'r6',
@@ -121,7 +126,8 @@ export const chapter2Data = {
             amount: '320,000원',
             note: '회의비는 회의록을 첨부해야 합니다.',
             correctCategory: '사업추진비',
-            evidence: ['minutes']
+            evidence: ['minutes'],
+            requiredExtraActions: ['minutes']
         },
         {
             id: 'r7',
@@ -133,7 +139,8 @@ export const chapter2Data = {
             amount: '520,000원',
             note: '50만원 이상 회의비는 참여명단과 서명 증빙도 필요합니다.',
             correctCategory: '사업추진비',
-            evidence: ['minutes', 'participants', 'signature']
+            evidence: ['minutes', 'participants', 'signature'],
+            requiredExtraActions: ['minutes', 'participants', 'signature']
         },
         {
             id: 'r8',
@@ -146,7 +153,8 @@ export const chapter2Data = {
             note: '장비류는 자산취득비로 구분해야 합니다.',
             correctCategory: '자산취득비',
             evidence: [],
-            asset: true
+            asset: true,
+            requiredExtraActions: ['asset']
         },
         {
             id: 'r9',
@@ -158,7 +166,8 @@ export const chapter2Data = {
             amount: '180,000원',
             note: '심야시간 집행은 반려 대상입니다.',
             correctCategory: '반려',
-            invalid: true
+            invalid: true,
+            requiredExtraActions: []
         },
         {
             id: 'r10',
@@ -170,7 +179,8 @@ export const chapter2Data = {
             amount: '300,000원',
             note: '회의비가 아닌 자문 수당입니다.',
             correctCategory: '운영비',
-            evidence: []
+            evidence: [],
+            requiredExtraActions: ['none']
         }
     ]
 };

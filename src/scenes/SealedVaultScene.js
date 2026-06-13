@@ -15,6 +15,8 @@ export class SealedVaultScene extends Phaser.Scene {
     constructor() {
         super('SealedVaultScene');
         this.clickTarget = null;
+        this.vaultOpening = false;
+        this.backgroundLayers = {};
     }
 
     create() {
@@ -56,7 +58,14 @@ export class SealedVaultScene extends Phaser.Scene {
 
         if (!GameState.get('hasCheckedInventory')) {
             this.time.delayedCall(250, () => {
-                this.dialogue.choose(dialogueData.intro, (choice) => this.resolveIntroChoice(choice.result));
+                this.dialogue.say([
+                    {
+                        speaker: 'KCA 간사',
+                        text: '김대리님, 참여인력이 총 10명인데 보안서약서가 8장 뿐이네요. 누락된 2장을 서류보관함에서 찾아 PIMS에 추가 등록해주세요.'
+                    }
+                ], () => {
+                    GameState.set('hasCheckedInventory', true);
+                });
             });
         }
 
@@ -165,26 +174,11 @@ export class SealedVaultScene extends Phaser.Scene {
                 this.dialogue.say(dialogueData.vaultLocked);
                 return;
             }
-            GameState.set('sealedVaultOpened', true);
-            this.scene.start('StageClearScene');
-        }
-    }
-
-    resolveIntroChoice(result) {
-        console.log('[SealedVaultScene] intro choice result', result);
-        GameState.set('hasCheckedInventory', true);
-        if (result === 'confident') {
-            GameState.decreaseHp(5);
-            if ((GameState.get('hp') ?? 0) <= 0) {
-                this.time.delayedCall(100, () => {
-                    this.scene.start('GameOverScene');
-                });
+            if (this.vaultOpening || GameState.get('sealedVaultOpened')) {
                 return;
             }
-            this.dialogue.say(dialogueData.confidentResult);
-            return;
+            this.openVaultAndAdvance();
         }
-        this.dialogue.say(dialogueData.carefulResult);
     }
 
     openAssistantDialog() {
@@ -216,6 +210,37 @@ export class SealedVaultScene extends Phaser.Scene {
         });
     }
 
+    openVaultAndAdvance() {
+        this.vaultOpening = true;
+        GameState.set('sealedVaultOpened', true);
+        this.player.setMovement(0, 0);
+        this.interaction.update(true);
+
+        Object.values(this.backgroundLayers || {}).forEach((layer) => {
+            if (layer) {
+                layer.setVisible(false);
+            }
+        });
+
+        if (this.backgroundLayers.open) {
+            this.backgroundLayers.open.setVisible(true);
+            this.backgroundLayers.open.setAlpha(0);
+            this.tweens.add({
+                targets: this.backgroundLayers.open,
+                alpha: { from: 0, to: 1 },
+                duration: 220,
+                ease: 'Sine.easeOut'
+            });
+        }
+
+        this.dialogue.say([
+            { speaker: 'KCA 간사', text: '좋습니다. 금고가 열렸습니다.' },
+            { speaker: 'KCA 간사', text: '이제 2단계로 가시죠.' }
+        ], () => {
+            this.scene.start('ExecutionHouseScene');
+        });
+    }
+
     tryInteract() {
         if (!this.dialogue.isActive) {
             this.interaction.interact();
@@ -226,29 +251,37 @@ export class SealedVaultScene extends Phaser.Scene {
         const farKey = ASSETS.backgrounds.sealedVaultFar.key;
         const midKey = ASSETS.backgrounds.sealedVaultMid.key;
         const legacyKey = ASSETS.backgrounds.sealedVault.key;
+        const openKey = ASSETS.backgrounds.sealedVaultOpen.key;
         const bgY = GAME_HEIGHT / 2;
 
         if (hasTexture(this, farKey)) {
-            this.add.image(CENTER_X, bgY, farKey)
+            this.backgroundLayers.far = this.add.image(CENTER_X, bgY, farKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(0);
         } else {
-            this.drawFarFallback();
+            this.backgroundLayers.far = this.drawFarFallback();
         }
 
         if (hasTexture(this, midKey)) {
-            this.add.image(CENTER_X, bgY, midKey)
+            this.backgroundLayers.mid = this.add.image(CENTER_X, bgY, midKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(1);
         } else if (hasTexture(this, legacyKey)) {
-            this.add.image(CENTER_X, bgY, legacyKey)
+            this.backgroundLayers.mid = this.add.image(CENTER_X, bgY, legacyKey)
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(1);
             this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x090714, 0.12)
                 .setDepth(1.1);
         } else {
-            this.drawMidFallback();
+            this.backgroundLayers.mid = this.drawMidFallback();
         }
+
+        this.backgroundLayers.open = hasTexture(this, openKey)
+            ? this.add.image(CENTER_X, bgY, openKey)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(2)
+                .setVisible(false)
+            : null;
 
     }
 
@@ -262,6 +295,7 @@ export class SealedVaultScene extends Phaser.Scene {
         g.fillStyle(0x25153d, 0.55).fillCircle(168, 78, 78).fillCircle(1066, 62, 88);
         g.fillStyle(0x2a2047, 0.35).fillRect(96, 40, 80, 120).fillRect(1020, 26, 94, 138);
         g.fillStyle(0x0a0f18, 1).fillRect(0, 122, GAME_WIDTH, 6);
+        return g;
     }
 
     drawMidFallback() {
@@ -295,6 +329,7 @@ export class SealedVaultScene extends Phaser.Scene {
         g.lineStyle(1, 0x72f0ff, 0.18);
         const area = chapter1Data.walkableArea;
         g.strokeRect(area.x, area.y, area.width, area.height);
+        return g;
     }
 
     createHud() {

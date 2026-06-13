@@ -29,6 +29,7 @@ export const ASSETS = {
         sealedVaultFar: image('bg_sealed_vault_far', '/assets/backgrounds/sealed_vault_far.png'),
         sealedVaultMid: image('bg_sealed_vault_mid', '/assets/backgrounds/sealed_vault_mid.png'),
         sealedVaultFront: image('bg_sealed_vault_front', '/assets/backgrounds/sealed_vault_front.png'),
+        sealedVaultOpen: image('bg_sealed_vault_open', '/assets/backgrounds/sealed_vault_open.png'),
         executionHouse: image('bg_execution_house', '/assets/backgrounds/execution_house_bg.png'),
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
         documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),

@@ -28,7 +28,7 @@ export class DialogBox {
             y: DIALOG_TOP + 17,
             bodyWidth: 526,
             choiceX: 46,
-            choiceY: DIALOG_TOP + 82,
+            choiceY: DIALOG_TOP + 106,
             hintX: 688,
             hintY: GAME_HEIGHT - 38,
             speakerBoxX: 152,
@@ -69,8 +69,8 @@ export class DialogBox {
             : scene.add.rectangle(this.layout.portraitX, this.layout.portraitY, this.layout.portraitWidth, this.layout.portraitHeight, 0x0b0c18, 0.92)
                 .setOrigin(0, 0)
                 .setStrokeStyle(2, 0x2be8ff, 0.42);
-        this.portraitImage = scene.add.image(this.layout.portraitX + this.layout.portraitWidth / 2, this.layout.portraitY + this.layout.portraitHeight / 2, ASSETS.characters.kcaAssistantIdle.key)
-            .setDisplaySize(this.layout.portraitWidth - 12, this.layout.portraitHeight - 12)
+        this.portraitImage = scene.add.image(this.layout.portraitX + this.layout.portraitWidth / 2, this.layout.portraitY + this.layout.portraitHeight / 2 + 0, ASSETS.characters.kcaAssistantIdle.key)
+            .setDisplaySize(this.layout.portraitWidth - 8, this.layout.portraitHeight + 6)
             .setOrigin(0.5);
 
         this.speakerText = scene.add.text(this.layout.speakerBoxX + 14, this.layout.speakerBoxY + this.layout.speakerBoxHeight / 2, '', {
@@ -86,7 +86,7 @@ export class DialogBox {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '12px',
             color: '#9aa0c8'
-        }).setOrigin(1, 0.5);
+        }).setOrigin(1, 0.5).setVisible(false);
         this.nextIndicator = scene.add.image(this.layout.panelX + this.layout.panelWidth - 24, DIALOG_TOP + DIALOG_HEIGHT - 23, ASSETS.ui.dialogNextIndicator.key)
             .setDisplaySize(16, 12)
             .setOrigin(0.5)
@@ -224,7 +224,7 @@ export class DialogBox {
         }
         this.updateSpeakerVisuals(line.speaker);
         this.bodyText.setText(line.text || '');
-        this.hintText.setText('Click / Space / Enter');
+        this.hintText.setText('');
         this.setNextIndicatorVisible(this.lineIndex < this.lines.length - 1);
     }
 

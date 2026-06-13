@@ -51,11 +51,11 @@ export class Player extends Phaser.GameObjects.Rectangle {
             this.queueBlink(Phaser.Math.Between(1000, 2400));
         }
 
-        this.nameText = scene.add.text(x, y + 74, '김대리', {
+        this.nameText = scene.add.text(x, y + 52, '김대리', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#ffffff',
-            backgroundColor: '#171024'
+            backgroundColor: 'rgba(23, 16, 36, 0.45)'
         }).setOrigin(0.5).setDepth(3);
     }
 
@@ -143,7 +143,7 @@ export class Player extends Phaser.GameObjects.Rectangle {
     }
 
     syncLabel() {
-        this.nameText.setPosition(this.x, this.y + 74);
+        this.nameText.setPosition(this.x, this.y + 52);
     }
 
     setMovement(vx, vy) {

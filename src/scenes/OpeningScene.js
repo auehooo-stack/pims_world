@@ -10,6 +10,8 @@ const ASSISTANT_LINES = [
     '자, 첫 번째 관문입니다. 1단계, 봉인된 금고로 가시죠.'
 ];
 
+const DEV_HOLD_ON_WORLD_TITLE = true;
+
 const ASSISTANT_LAYOUT = {
     panelX: 680,
     panelY: 526,
@@ -393,35 +395,21 @@ export class OpeningScene extends Phaser.Scene {
         }
         this.track(this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12071f, hasWorldBackground ? 0.16 : 1).setOrigin(0));
 
-        const title = this.track(this.add.text(CENTER_X, 242, 'PIMS WORLD', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '72px',
-            color: '#fff5c7',
-            stroke: '#5c1dff',
-            strokeThickness: 8,
-            shadow: {
-                offsetX: 2,
-                offsetY: 2,
-                blur: 0,
-                color: '#000000',
-                fill: true,
-                stroke: true
-            }
-        }).setOrigin(0.5));
-        this.tweens.add({
-            targets: title,
-            y: { from: 242, to: 234 },
-            yoyo: true,
-            repeat: -1,
-            duration: 1100,
-            ease: 'Sine.easeInOut'
-        });
-
-        this.track(this.add.text(CENTER_X, 330, '퇴근 없는 테마파크', {
+        this.track(this.add.text(CENTER_X, 430, '퇴근 없는 테마파크', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '28px',
             color: '#75f6ff'
         }).setOrigin(0.5));
+
+        this.track(this.add.text(CENTER_X, 478, 'ICT기금 사업관리 15개월 사이클을 완수하라', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '24px',
+            color: '#f8f3ff'
+        }).setOrigin(0.5));
+
+        if (DEV_HOLD_ON_WORLD_TITLE) {
+            return;
+        }
 
         this.schedulePhaseAdvance('assistant', 2200);
     }

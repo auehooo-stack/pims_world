@@ -29,41 +29,6 @@ export class StartScene extends Phaser.Scene {
             }
         }
 
-        this.add.text(CENTER_X, 208, 'PIMS WORLD', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '78px',
-            color: '#fff5c7',
-            stroke: '#5c1dff',
-            strokeThickness: 6,
-            shadow: {
-                offsetX: 2,
-                offsetY: 2,
-                blur: 0,
-                color: '#000000',
-                fill: true,
-                stroke: true
-            }
-        }).setOrigin(0.5);
-
-        this.add.text(CENTER_X, 302, '퇴근없는 테마파크', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '34px',
-            color: '#75f6ff'
-        }).setOrigin(0.5);
-
-        this.add.text(CENTER_X, 386, 'ICT기금 사업관리 15개월 사이클을 완수하라', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '24px',
-            color: '#f8f3ff'
-        }).setOrigin(0.5);
-
-        const startText = this.add.text(CENTER_X, 612, 'Click or Tap to Start', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '24px',
-            color: '#ffd36e'
-        }).setOrigin(0.5);
-        this.tweens.add({ targets: startText, alpha: 0.35, yoyo: true, repeat: -1, duration: 650 });
-
         // BGM only starts after a user gesture so browser autoplay rules are respected.
         this.input.once('pointerdown', () => {
             playAudioIfAvailable(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 });

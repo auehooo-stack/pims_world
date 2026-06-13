@@ -123,16 +123,16 @@ export class BottomHUD {
                 .setStrokeStyle(2, 0x2be8ff, 0.42);
 
         this.interactionPortraitImage = hasTexture(this.scene, ASSETS.ui.dialogPortraitPimsWorld.key)
-            ? this.scene.add.image(portraitX + portraitWidth / 2, portraitY + portraitHeight / 2, ASSETS.ui.dialogPortraitPimsWorld.key)
+            ? this.scene.add.image(portraitX + portraitWidth / 2, portraitY + portraitHeight / 2 + 0, ASSETS.ui.dialogPortraitPimsWorld.key)
                 .setOrigin(0.5)
-                .setDisplaySize(portraitWidth - 12, portraitHeight - 12)
+                .setDisplaySize(portraitWidth - 20, portraitHeight - 20)
             : null;
 
         this.interactionSpeakerBox = hasTexture(this.scene, ASSETS.ui.dialogSpeakerBox.key)
             ? this.scene.add.image(speakerBoxX, speakerBoxY, ASSETS.ui.dialogSpeakerBox.key)
                 .setOrigin(0, 0)
                 .setDisplaySize(speakerBoxWidth, speakerBoxHeight)
-            : this.scene.add.rectangle(speakerBoxX, speakerBoxY, speakerBoxWidth, speakerBoxHeight, 0x17132a, 0.94)
+            : this.scene.add.rectangle(speakerBoxX, speakerBoxY, speakerBoxWidth, speakerBoxHeight, 0x17132a, 0.5)
                 .setOrigin(0, 0)
                 .setStrokeStyle(2, 0x9d5dd6, 0.72);
 

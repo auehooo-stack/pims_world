@@ -588,7 +588,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
             });
         });
 
-        this.endPromptText = this.add.text(640, 672, 'Space 또는 Enter: 다음 장면', {
+        this.endPromptText = this.add.text(640, 672, 'Space 또는 Enter: 금고로 돌아가기', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.darkSubText,
