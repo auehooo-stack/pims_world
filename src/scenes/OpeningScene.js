@@ -6,21 +6,23 @@ import { GameState } from '../systems/GameState.js';
 const ASSISTANT_LINES = [
     '어서오세요, 신입 담당자님.\n지금 당신은 현실의 시간이 멈춘 PIMS 월드에 와있습니다.',
     '나가고 싶다고요? 방법은 하나뿐입니다.',
-    '가상의 15개월 사업 사이클을 완벽히 완수하고, 3월 31일의 반납 포털을 통과하세요. \n실패하면? 당신은 영원히 이 놀이공원의 청소부가 될 겁니다.',
-    '자, 첫 번째 관문입니다. 1단계, 봉인된 금고로 가시죠.'
+    '가상의 15개월 사업 사이클을 완수하고, 3월 31일의 반납 포털을 통과하세요. \n실패하면? 당신은 영원히 이 놀이공원의 청소부가 될 겁니다.',
+    '자, 첫 번째 관문입니다. \nPIMS에 협약서류를 등록하고 사업비를 교부받으세요.'
 ];
 
 const DEV_HOLD_ON_WORLD_TITLE = true;
 
 const ASSISTANT_LAYOUT = {
-    panelX: 680,
-    panelY: 526,
-    panelWidth: 1040,
+    panelX: 666,
+    panelY: 590,
+    panelWidth: 870,
     panelHeight: 156,
-    nameX: 184,
-    nameY: 466,
-    bodyX: 184,
-    bodyY: 500,
+    nameX: 243,
+    nameY: 510,
+    nameBoxWidth: 141,
+    nameBoxHeight: 34,
+    bodyX: 270,
+    bodyY: 560,
     bodyFontSize: 22,
     bodyWrapWidth: 920,
     bodyLineSpacing: 4,
@@ -145,7 +147,7 @@ export class OpeningScene extends Phaser.Scene {
 
     createSkipButton() {
         this.skipButton = this.add.rectangle(GAME_WIDTH - 88, GAME_HEIGHT - 46, 120, 30, 0x24183f, 0.92)
-            .setStrokeStyle(2, 0x75f6ff, 0.75)
+            .setStrokeStyle(2, 0xb86bff, 0.78)
             .setInteractive({ useHandCursor: true })
             .setDepth(ASSISTANT_DEPTHS.button + 20);
         this.skipButtonText = this.add.text(GAME_WIDTH - 88, GAME_HEIGHT - 46, 'Skip', {
@@ -388,30 +390,93 @@ export class OpeningScene extends Phaser.Scene {
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x12071f);
 
+        const hasWorldBackgroundClosed = hasTexture(this, ASSETS.opening.worldBackgroundClosed.key);
         const hasWorldBackground = hasTexture(this, ASSETS.opening.worldBackground.key);
-        if (hasWorldBackground) {
-            this.track(this.add.image(CENTER_X, CENTER_Y, ASSETS.opening.worldBackground.key)
-                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT));
+        let closedBackground = null;
+        let openBackground = null;
+        if (hasWorldBackgroundClosed) {
+            closedBackground = this.track(this.add.image(CENTER_X, CENTER_Y, ASSETS.opening.worldBackgroundClosed.key)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setAlpha(1)
+                .setDepth(ASSISTANT_DEPTHS.background));
+            if (hasWorldBackground) {
+                openBackground = this.track(this.add.image(CENTER_X, CENTER_Y, ASSETS.opening.worldBackground.key)
+                    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                    .setAlpha(0)
+                    .setDepth(ASSISTANT_DEPTHS.background + 1));
+            }
+        } else if (hasWorldBackground) {
+            openBackground = this.track(this.add.image(CENTER_X, CENTER_Y, ASSETS.opening.worldBackground.key)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(ASSISTANT_DEPTHS.background));
         }
-        this.track(this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12071f, hasWorldBackground ? 0.16 : 1).setOrigin(0));
+        const worldShade = this.track(this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12071f, (hasWorldBackgroundClosed || hasWorldBackground) ? 0.40 : 1).setOrigin(0).setDepth(ASSISTANT_DEPTHS.overlay));
+        const worldFlash = this.track(this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setOrigin(0).setDepth(ASSISTANT_DEPTHS.overlay + 1));
 
-        this.track(this.add.text(CENTER_X, 430, '퇴근 없는 테마파크', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
+        const titleText = this.track(this.add.text(CENTER_X, 470, '퇴근 없는 테마파크', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '28px',
-            color: '#75f6ff'
-        }).setOrigin(0.5));
+            color: '#7f3cff',
+            stroke: '#2a104f',
+            strokeThickness: 5
+        }).setOrigin(0.5).setAlpha(0).setDepth(ASSISTANT_DEPTHS.text));
 
-        this.track(this.add.text(CENTER_X, 478, 'ICT기금 사업관리 15개월 사이클을 완수하라', {
+        const subtitleText = this.track(this.add.text(CENTER_X, 518, 'ICT기금 사업관리 15개월 사이클을 완수하라', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '24px',
             color: '#f8f3ff'
-        }).setOrigin(0.5));
+        }).setOrigin(0.5).setAlpha(0).setDepth(ASSISTANT_DEPTHS.text));
 
-        if (DEV_HOLD_ON_WORLD_TITLE) {
-            return;
+        this.time.delayedCall(420, () => {
+            this.cameras.main.shake(420, 0.004);
+            this.tweens.add({
+                targets: closedBackground,
+                alpha: { from: 1, to: 0 },
+                duration: 620,
+                ease: 'Sine.easeOut'
+            });
+            if (openBackground) {
+                this.tweens.add({
+                    targets: openBackground,
+                    alpha: { from: 0, to: 1 },
+                    duration: 620,
+                    ease: 'Sine.easeOut'
+                });
+            }
+            this.tweens.add({
+                targets: worldShade,
+                alpha: { from: hasWorldBackgroundClosed || hasWorldBackground ? 0.40 : 1, to: 0.14 },
+                duration: 620,
+                ease: 'Sine.easeOut'
+            });
+            this.tweens.add({
+                targets: worldFlash,
+                alpha: { from: 0, to: 0.22 },
+                yoyo: true,
+                duration: 160,
+                ease: 'Sine.easeOut'
+            });
+            this.tweens.add({
+                targets: titleText,
+                alpha: { from: 0, to: 1 },
+                y: { from: 470, to: 458 },
+                duration: 680,
+                delay: 240,
+                ease: 'Sine.easeOut'
+            });
+            this.tweens.add({
+                targets: subtitleText,
+                alpha: { from: 0, to: 1 },
+                y: { from: 518, to: 506 },
+                duration: 680,
+                delay: 360,
+                ease: 'Sine.easeOut'
+            });
+        });
+
+        if (!DEV_HOLD_ON_WORLD_TITLE) {
+            this.schedulePhaseAdvance('assistant', 2200);
         }
-
-        this.schedulePhaseAdvance('assistant', 2200);
     }
 
     showAssistantIntro() {
@@ -444,43 +509,52 @@ export class OpeningScene extends Phaser.Scene {
             this.track(this.add.rectangle(0, fadeTop, GAME_WIDTH, height, fadeColors[i], fadeAlphas[i]).setOrigin(0).setDepth(ASSISTANT_DEPTHS.overlay));
         }
         if (hasTexture(this, ASSETS.opening.assistantCutin.key)) {
-            const assistantShadow = this.track(this.add.image(276, 336, ASSETS.opening.assistantCutin.key)
+            const assistantShadow = this.track(this.add.image(CENTER_X - 20, 336, ASSETS.opening.assistantCutin.key)
                 .setDisplaySize(372, 512)
                 .setTint(0xa56bff)
                 .setAlpha(0)
                 .setDepth(ASSISTANT_DEPTHS.character - 1));
-            const assistant = this.track(this.add.image(296, 336, ASSETS.opening.assistantCutin.key).setDepth(ASSISTANT_DEPTHS.character));
+            const assistant = this.track(this.add.image(CENTER_X, 336, ASSETS.opening.assistantCutin.key).setDepth(ASSISTANT_DEPTHS.character));
             assistant.setDisplaySize(360, 500);
             this.tweens.add({
                 targets: assistantShadow,
-                x: { from: 256, to: 276 },
+                x: { from: CENTER_X - 40, to: CENTER_X - 20 },
                 alpha: { from: 0, to: 0.14 },
                 duration: 250,
                 ease: 'Sine.easeOut'
             });
             this.tweens.add({
                 targets: assistant,
-                x: { from: 276, to: 296 },
+                x: { from: CENTER_X - 20, to: CENTER_X },
                 alpha: { from: 0, to: 1 },
                 duration: 250,
                 ease: 'Sine.easeOut'
             });
 
             const assistantFade = this.add.graphics();
-            assistantFade.fillStyle(0x05050a, 0.05).fillRect(120, 486, 320, 116);
-            assistantFade.fillStyle(0x05050a, 0.03).fillRect(120, 448, 320, 44);
-            assistantFade.fillStyle(0x05050a, 0.02).fillRect(120, 406, 320, 36);
-            assistantFade.fillStyle(0x05050a, 0.02).fillRect(120, 132, 14, 468);
-            assistantFade.fillStyle(0x05050a, 0.02).fillRect(426, 132, 14, 468);
+            assistantFade.fillStyle(0x05050a, 0.05).fillRect(CENTER_X - 160, 486, 320, 116);
+            assistantFade.fillStyle(0x05050a, 0.03).fillRect(CENTER_X - 160, 448, 320, 44);
+            assistantFade.fillStyle(0x05050a, 0.02).fillRect(CENTER_X - 160, 406, 320, 36);
+            assistantFade.fillStyle(0x05050a, 0.02).fillRect(CENTER_X - 174, 132, 14, 468);
+            assistantFade.fillStyle(0x05050a, 0.02).fillRect(CENTER_X + 160, 132, 14, 468);
             this.track(assistantFade.setDepth(ASSISTANT_DEPTHS.character + 1));
         } else {
             const silhouette = this.add.graphics();
-            silhouette.fillStyle(0x1d2140, 1).fillRoundedRect(124, 140, 316, 420, 24);
-            silhouette.fillStyle(0x0b0a14, 1).fillCircle(280, 190, 68);
-            silhouette.fillStyle(0x75f6ff, 0.22).fillRoundedRect(184, 260, 192, 204, 16);
-            silhouette.lineStyle(3, 0x75f6ff, 0.55).strokeRoundedRect(124, 140, 316, 420, 24);
+            silhouette.fillStyle(0x1d2140, 1).fillRoundedRect(CENTER_X - 158, 140, 316, 420, 24);
+            silhouette.fillStyle(0x0b0a14, 1).fillCircle(CENTER_X, 190, 68);
+            silhouette.fillStyle(0x75f6ff, 0.22).fillRoundedRect(CENTER_X - 96, 260, 192, 204, 16);
+            silhouette.lineStyle(3, 0x75f6ff, 0.55).strokeRoundedRect(CENTER_X - 158, 140, 316, 420, 24);
             this.track(silhouette.setDepth(ASSISTANT_DEPTHS.character));
         }
+
+        const nameBox = this.track(this.add.rectangle(
+            ASSISTANT_LAYOUT.nameX + 86,
+            ASSISTANT_LAYOUT.nameY,
+            ASSISTANT_LAYOUT.nameBoxWidth,
+            ASSISTANT_LAYOUT.nameBoxHeight,
+            0x05050a,
+            0.88
+        ).setDepth(ASSISTANT_DEPTHS.text + 2));
 
         const dialoguePanel = this.track(this.add.rectangle(
             ASSISTANT_LAYOUT.panelX,
@@ -489,10 +563,10 @@ export class OpeningScene extends Phaser.Scene {
             ASSISTANT_LAYOUT.panelHeight,
             0x05050a,
             0.88
-        ).setStrokeStyle(2, 0x75f6ff, 0.48).setDepth(ASSISTANT_DEPTHS.dialogue));
+        ).setDepth(ASSISTANT_DEPTHS.dialogue));
 
         const nameLabel = this.track(this.add.text(
-            ASSISTANT_LAYOUT.nameX,
+            ASSISTANT_LAYOUT.nameX + 86,
             ASSISTANT_LAYOUT.nameY,
             'KCA 간사',
             {
@@ -500,7 +574,7 @@ export class OpeningScene extends Phaser.Scene {
                 fontSize: '20px',
                 color: '#ffd36e'
             }
-        ).setDepth(ASSISTANT_DEPTHS.text));
+        ).setOrigin(0.5).setDepth(ASSISTANT_DEPTHS.text + 3));
 
         this.assistantLineText = this.track(this.add.text(
             ASSISTANT_LAYOUT.bodyX,
@@ -515,19 +589,8 @@ export class OpeningScene extends Phaser.Scene {
             }
         ).setDepth(ASSISTANT_DEPTHS.text));
 
-        this.assistantPromptText = this.track(this.add.text(
-            ASSISTANT_LAYOUT.promptX,
-            ASSISTANT_LAYOUT.promptY,
-            '',
-            {
-                fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '15px',
-                color: '#c9ffef'
-            }
-        ).setOrigin(1, 0.5).setDepth(ASSISTANT_DEPTHS.text));
-
         this.tweens.add({
-            targets: [dialoguePanel, nameLabel, this.assistantLineText, this.assistantPromptText],
+            targets: [nameBox, dialoguePanel, nameLabel, this.assistantLineText],
             alpha: { from: 0, to: 1 },
             duration: 200,
             ease: 'Sine.easeOut'
@@ -539,11 +602,6 @@ export class OpeningScene extends Phaser.Scene {
     renderAssistantLine() {
         const line = ASSISTANT_LINES[this.assistantIndex];
         this.assistantLineText.setText(line);
-        this.assistantPromptText.setText(
-            this.assistantIndex === ASSISTANT_LINES.length - 1
-                ? 'Click or Enter: 1단계 시작'
-                : 'Click or Enter: 다음 대사'
-        );
     }
 
     advancePhase() {
@@ -628,4 +686,3 @@ export class OpeningScene extends Phaser.Scene {
         // no-op: assistant lines now advance only by click or Enter.
     }
 }
-

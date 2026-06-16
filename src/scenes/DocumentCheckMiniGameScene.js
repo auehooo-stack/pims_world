@@ -6,17 +6,17 @@ const LAYOUT = {
     title: { x: 640, y: 88 },
     progress: { x: 640, y: 118 },
     hp: { x: 1130, y: 55 },
-    leftPanel: { x: 75, y: 155, width: 520, height: 245 },
-    rightPanel: { x: 690, y: 155, width: 520, height: 245 },
-    instruction: { x: 640, y: 420 },
+    leftPanel: { x: 125, y: 155, width: 520, height: 245 },
+    rightPanel: { x: 740, y: 155, width: 520, height: 245 },
+    instruction: { x: 640, y: 430 },
     bottomPanel: { x: 75, y: 455, width: 1130, height: 190 },
     choiceButtons: [
         { x: 210, y: 528, width: 250, height: 44 },
         { x: 515, y: 528, width: 250, height: 44 },
         { x: 830, y: 528, width: 250, height: 44 }
     ],
-    inputBox: { x: 120, y: 510, width: 420, height: 70 },
-    keypad: { x: 690, y: 500, buttonWidth: 64, buttonHeight: 36, gapX: 14, gapY: 8 }
+    inputBox: { x: 200, y: 510, width: 350, height: 100 },
+    keypad: { x: 740, y: 500, buttonWidth: 64, buttonHeight: 36, gapX: 14, gapY: 8 }
 };
 
 const COLORS = {
@@ -47,7 +47,7 @@ const PROBLEMS = [
             value: '6월 30일'
         },
         right: {
-            title: 'PIMS 입력창',
+            title: 'PIMS 사업정보',
             field: '참여인력 기간',
             value: '12월 31일'
         },
@@ -169,7 +169,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.progressText.setText(`${index + 1}/3`);
         this.instructionText.setText(problem.instruction);
         this.instructionText.setColor(COLORS.bottomText);
-        this.instructionText.setY(LAYOUT.instruction.y + 10);
+        this.instructionText.setY(LAYOUT.instruction.y + 20);
         this.hpText.setText(`HP ${GameState.get('hp') ?? 100}`);
 
         this.renderComparisonPanels(problem);
@@ -186,34 +186,36 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         const left = LAYOUT.leftPanel;
         const right = LAYOUT.rightPanel;
 
-        const leftTitle = this.add.text(left.x + 30, left.y + 30, problem.left.title, {
+        const leftTitle = this.add.text(left.x + 60, left.y + 60, problem.left.title, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
-            color: COLORS.paperText
+            color: COLORS.paperText,
+            fontStyle: 'bold'
         }).setDepth(50);
-        const leftField = this.add.text(left.x + 30, left.y + 70, problem.left.field, {
+        const leftField = this.add.text(left.x + 60, left.y + 100, problem.left.field, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.paperAccent
         }).setDepth(50);
-        const leftValue = this.add.text(left.x + 30, left.y + 120, problem.left.value, {
+        const leftValue = this.add.text(left.x + 60, left.y + 150, problem.left.value, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '26px',
             color: COLORS.paperText
         }).setDepth(50);
 
-        const rightTitle = this.add.text(right.x + 35, right.y + 30, problem.right.title, {
+        const rightTitle = this.add.text(right.x + 65, right.y + 60, problem.right.title, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
-            color: COLORS.darkSubText
+            color: COLORS.darkSubText,
+            fontStyle: 'bold'
         }).setDepth(50);
-        const rightField = this.add.text(right.x + 35, right.y + 70, problem.right.field, {
+        const rightField = this.add.text(right.x + 65, right.y + 100, problem.right.field, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.darkSubText
         }).setDepth(50);
 
-        const rightValue = this.add.text(right.x + 35, right.y + 120, problem.right.value, {
+        const rightValue = this.add.text(right.x + 65, right.y + 150, problem.right.value, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: problem.type === 'choice' ? '24px' : '26px',
             color: COLORS.darkText
@@ -223,8 +225,8 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         const rightHighlight = this.add.graphics().setDepth(5);
         rightHighlight.lineStyle(2, COLORS.highlightBorder, 0.95);
         rightHighlight.fillStyle(COLORS.highlight, 0.06);
-        rightHighlight.fillRoundedRect(right.x + 28, right.y + 108, rightHighlightWidth, 46, 6);
-        rightHighlight.strokeRoundedRect(right.x + 28, right.y + 108, rightHighlightWidth, 46, 6);
+        rightHighlight.fillRoundedRect(right.x + 38, right.y + 148, rightHighlightWidth, 46, 6);
+        rightHighlight.strokeRoundedRect(right.x + 38, right.y + 148, rightHighlightWidth, 46, 6);
 
         this.trackDynamic(leftTitle, leftField, leftValue, rightTitle, rightField, rightValue, rightHighlight);
     }
@@ -253,13 +255,13 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
             0.12
         ).setOrigin(0, 0).setStrokeStyle(1, COLORS.inputBorder, 0.9).setDepth(5);
 
-        const inputLabel = this.add.text(LAYOUT.inputBox.x + 25, LAYOUT.inputBox.y + 15, '입력값', {
+        const inputLabel = this.add.text(LAYOUT.inputBox.x + 55, LAYOUT.inputBox.y + 14, '입력값', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: COLORS.bottomText
         }).setDepth(50);
 
-        this.inputValueText = this.add.text(LAYOUT.inputBox.x + 25, LAYOUT.inputBox.y + 42, this.currentInput || '__', {
+        this.inputValueText = this.add.text(LAYOUT.inputBox.x + 55, LAYOUT.inputBox.y + 41, this.currentInput || '__', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '32px',
             color: COLORS.inputText
@@ -528,73 +530,13 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
     completeMiniGame() {
         GameState.set('pimsRegistered', true);
         GameState.set('miniGameCleared', true);
+        GameState.set('showDocumentCheckToast', true);
         this.completed = true;
         this.waitingForReturn = false;
-
-        const clearBgKey = ASSETS.backgrounds.documentCheckClear.key;
-        if (this.backdrop && hasTexture(this, clearBgKey)) {
-            this.backdrop.setTexture(clearBgKey);
-            this.backdrop.setDisplaySize(1280, 720);
-        }
-
         this.clearDynamicUI();
-
-        this.progressText.setText('');
-        this.instructionText.setText('필수서류 등록 완료');
-        this.instructionText.setColor(COLORS.success);
-        this.instructionText.setY(220);
-        this.instructionText.setFontSize('28px');
-        this.instructionText.setFontStyle('bold');
-
-        this.subInstructionText = this.add.text(640, 274, '사업비 교부 준비가 끝났습니다.', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: COLORS.success,
-            align: 'center'
-        }).setOrigin(0.5, 0.5).setDepth(200);
-        this.dynamicObjects.push(this.subInstructionText);
-
-        this.flashOverlay = this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0);
-        this.flashOverlay.setDepth(190);
-        this.flashOverlay.setAlpha(0);
-        this.tweens.add({
-            targets: this.flashOverlay,
-            alpha: { from: 0, to: 0.22 },
-            duration: 160,
-            yoyo: true,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-                this.flashOverlay.destroy();
-                this.flashOverlay = null;
-            }
+        this.time.delayedCall(120, () => {
+            this.scene.start('SealedVaultScene');
         });
-
-        const sparklePositions = [
-            [360, 250],
-            [470, 205],
-            [805, 220],
-            [930, 270]
-        ];
-        sparklePositions.forEach(([x, y]) => {
-            const sparkle = this.add.circle(x, y, 3, 0xffffff, 0.9).setDepth(191);
-            this.tweens.add({
-                targets: sparkle,
-                y: y - 30,
-                alpha: 0,
-                duration: 760,
-                delay: 60,
-                ease: 'Sine.easeOut',
-                onComplete: () => sparkle.destroy()
-            });
-        });
-
-        this.endPromptText = this.add.text(640, 672, 'Space 또는 Enter: 금고로 돌아가기', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: COLORS.darkSubText,
-            align: 'center'
-        }).setOrigin(0.5, 0.5).setDepth(200);
-        this.dynamicObjects.push(this.endPromptText);
     }
 
     clearDynamicUI() {
@@ -628,5 +570,3 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.clearDynamicUI();
     }
 }
-
-

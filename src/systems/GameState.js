@@ -128,8 +128,11 @@ export const GameState = {
             return 'PIMS 단말기에서 최종 등록을 완료하세요.';
         }
 
+        if (this.get('sealedVaultOpened')) {
+            return '사업비 금고를 확인하세요.';
+        }
         if (this.get('miniGameCleared')) {
-            return '봉인된 금고 문을 확인하세요.';
+            return 'PIMS 단말기에서 필수서류를 등록하세요.';
         }
         if (this.get('hasFoundMissingNdas')) {
             return 'PIMS 단말기에서 필수서류를 등록하세요.';

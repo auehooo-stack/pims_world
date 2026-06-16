@@ -81,6 +81,7 @@ export const ASSETS = {
         warningBackground: image('ui_opening_warning_background', '/assets/opening/warning_background.png'),
         glitchBackground: image('ui_opening_glitch_background', '/assets/opening/glitch_background.png'),
         worldBackground: image('ui_opening_world_background', '/assets/opening/pims_world_background.png'),
+        worldBackgroundClosed: image('ui_opening_world_background_closed', '/assets/opening/pims_world_background_closed.png'),
         assistantBackground: image('ui_opening_assistant_background', '/assets/opening/assistant_background.png'),
         warningPanel: image('ui_opening_warning_panel', '/assets/opening/error_warning_panel.png'),
         assistantCutin: image('ui_opening_assistant_cutin', '/assets/opening/kca_assistant_cutin.png')

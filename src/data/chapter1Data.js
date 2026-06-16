@@ -40,11 +40,11 @@ export const chapter1Data = {
         },
         {
             id: 'vault',
-            name: '금고 벽',
-            prompt: 'Space: 금고 벽 확인',
-            x: 1085,
-            y: 442,
-            width: 126,
+            name: '사업비 금고',
+            prompt: 'Space: 사업비 금고 확인',
+            x: 1073,
+            y: 434,
+            width: 135,
             height: 150,
         }
     ]
