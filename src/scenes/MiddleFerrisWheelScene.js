@@ -7,6 +7,7 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
+import { ASSETS, playBgmWithFade } from '../systems/AssetManager.js';
 import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const REPORT_REQUIRED_IDS = ['performance', 'execution', 'official_letter'];
@@ -37,6 +38,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
     create() {
         GameState.set('currentChapter', 3);
         GameState.set('timeRunning', true);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
         GameState.set('stage3BriefingDone', false);
         GameState.set('stage3Phase', 'briefing');
         GameState.set('stage3TimerRemaining', chapter3Data.timerDays);

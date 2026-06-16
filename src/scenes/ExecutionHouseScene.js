@@ -7,7 +7,7 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
-import { ASSETS, hasTexture } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { CENTER_X, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const RECEIPT_TOTAL = chapter2Data.receiptPool.length;
@@ -68,6 +68,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
     create() {
         GameState.set('currentChapter', 2);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
         GameState.set('stage2BriefingDone', false);
         GameState.set('stage2Phase', 'briefing');
         GameState.set('stage2CollectedCount', 0);

@@ -1,6 +1,6 @@
 ﻿import * as Phaser from 'phaser';
 import { GameState } from '../systems/GameState.js';
-import { ASSETS, hasTexture } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 
 const LAYOUT = {
     title: { x: 640, y: 88 },
@@ -111,6 +111,7 @@ export class DocumentCheckMiniGameScene extends Phaser.Scene {
         this.dynamicObjects = [];
 
         this.cameras.main.setBackgroundColor(0x090714);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
         this.createBackdrop();
         this.createStaticHeader();
         this.input.keyboard.on('keydown', this.handleKeyboardInput, this);

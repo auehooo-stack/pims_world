@@ -8,7 +8,7 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
-import { ASSETS, hasTexture } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 export class SealedVaultScene extends Phaser.Scene {
@@ -21,6 +21,7 @@ export class SealedVaultScene extends Phaser.Scene {
 
     create() {
         this.cameras.main.setBackgroundColor(0x090714);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
         this.drawBackground();
         this.createHud();
         this.dialogue = new DialogueManager(this, {

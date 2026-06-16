@@ -1,11 +1,13 @@
-﻿import * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { GameState } from '../systems/GameState.js';
 import { CENTER_X, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
-import { ASSETS, hasTexture, playAudioIfAvailable } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 
 export class StartScene extends Phaser.Scene {
     constructor() {
         super('StartScene');
+        this.startButton = null;
+        this.starting = false;
     }
 
     create() {
@@ -29,11 +31,26 @@ export class StartScene extends Phaser.Scene {
             }
         }
 
-        // BGM only starts after a user gesture so browser autoplay rules are respected.
-        this.input.once('pointerdown', () => {
-            playAudioIfAvailable(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 });
+        this.startButton = this.add.rectangle(CENTER_X, GAME_HEIGHT - 80, 309, 64, 0x24183f, 0.0)
+            .setStrokeStyle(0, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
+
+        const beginGame = () => {
+            if (this.starting) {
+                return;
+            }
+            this.starting = true;
+            this.sound?.context?.resume?.();
+            playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
             this.scene.start('OpeningScene');
-        });
+        };
+
+        this.startButton.on('pointerdown', beginGame);
+    }
+
+    shutdown() {
+        this.startButton?.destroy();
+        this.startButton = null;
+        this.starting = false;
     }
 }
-

@@ -107,7 +107,8 @@ export const ASSETS = {
         vaultFlash: image('fx_vault_flash', '/assets/effects/vault_flash.png')
     },
     audio: {
-        bgmMain: audio('audio_bgm_main', '/assets/audio/bgm_main.mp3'),
+        bgmMain: audio('audio_bgm_main', '/assets/audio/bgm_main.wav'),
+        bgmOpeningTitle: audio('audio_bgm_opening_title', '/assets/audio/bgm_opening_title.wav'),
         sfxClick: audio('audio_sfx_click', '/assets/audio/sfx_click.wav'),
         sfxInteract: audio('audio_sfx_interact', '/assets/audio/sfx_interact.wav'),
         sfxSuccess: audio('audio_sfx_success', '/assets/audio/sfx_success.wav'),
@@ -203,4 +204,54 @@ export const playAudioIfAvailable = (scene, key, config = {}) => {
     const sound = scene.sound.add(key, config);
     sound.play();
     return sound;
+};
+
+export const playBgmWithFade = (scene, key, config = {}, fadeDuration = 700) => {
+    if (!hasAudio(scene, key)) {
+        return null;
+    }
+
+    const game = scene?.game;
+    const currentTrack = game?.__bgmTrack || null;
+    const targetVolume = typeof config.volume === 'number' ? config.volume : 0.35;
+    const loop = config.loop ?? true;
+
+    if (currentTrack && currentTrack.key === key && currentTrack.isPlaying) {
+        currentTrack.setVolume(targetVolume);
+        return currentTrack;
+    }
+
+    const nextTrack = scene.sound.add(key, {
+        ...config,
+        loop,
+        volume: 0
+    });
+    nextTrack.play();
+
+    scene.tweens.add({
+        targets: nextTrack,
+        volume: { from: 0, to: targetVolume },
+        duration: fadeDuration,
+        ease: 'Sine.easeInOut'
+    });
+
+    if (currentTrack && currentTrack.isPlaying) {
+        const previousTrack = currentTrack;
+        scene.tweens.add({
+            targets: previousTrack,
+            volume: { from: previousTrack.volume, to: 0 },
+            duration: fadeDuration,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                previousTrack.stop();
+            }
+        });
+    }
+
+    if (game) {
+        game.__bgmTrack = nextTrack;
+        game.__bgmKey = key;
+    }
+
+    return nextTrack;
 };

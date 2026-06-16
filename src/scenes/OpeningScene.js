@@ -1,6 +1,6 @@
 ﻿import * as Phaser from 'phaser';
 import { CENTER_X, CENTER_Y, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
-import { ASSETS, hasTexture } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { GameState } from '../systems/GameState.js';
 
 const ASSISTANT_LINES = [
@@ -188,6 +188,7 @@ export class OpeningScene extends Phaser.Scene {
         this.currentPhase = 'login';
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x05040a);
+        playBgmWithFade(this, ASSETS.audio.bgmOpeningTitle.key, { loop: true, volume: 0.32 }, 900);
 
         if (hasTexture(this, ASSETS.backgrounds.openingLogin.key)) {
             this.track(this.add.image(CENTER_X, CENTER_Y, ASSETS.backgrounds.openingLogin.key)
@@ -236,6 +237,7 @@ export class OpeningScene extends Phaser.Scene {
         this.currentPhase = 'warning';
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x1a0608);
+        playBgmWithFade(this, ASSETS.audio.bgmOpeningTitle.key, { loop: true, volume: 0.32 }, 900);
 
         const hasWarningBackground = hasTexture(this, ASSETS.opening.warningBackground.key);
         if (hasWarningBackground) {
@@ -293,6 +295,7 @@ export class OpeningScene extends Phaser.Scene {
         this.currentPhase = 'glitch';
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x090714);
+        playBgmWithFade(this, ASSETS.audio.bgmOpeningTitle.key, { loop: true, volume: 0.32 }, 900);
 
         const hasGlitchBackground = hasTexture(this, ASSETS.opening.glitchBackground.key);
         if (hasGlitchBackground) {
@@ -389,6 +392,7 @@ export class OpeningScene extends Phaser.Scene {
         this.currentPhase = 'world';
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x12071f);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
 
         const hasWorldBackgroundClosed = hasTexture(this, ASSETS.opening.worldBackgroundClosed.key);
         const hasWorldBackground = hasTexture(this, ASSETS.opening.worldBackground.key);
@@ -484,6 +488,7 @@ export class OpeningScene extends Phaser.Scene {
         this.assistantIndex = 0;
         this.clearSceneObjects();
         this.cameras.main.setBackgroundColor(0x0c0820);
+        playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
 
         const hasAssistantBackground = hasTexture(this, ASSETS.opening.assistantBackground.key);
         if (hasAssistantBackground) {
