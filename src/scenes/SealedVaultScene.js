@@ -69,6 +69,32 @@ export class SealedVaultScene extends Phaser.Scene {
             });
         }
 
+        if (GameState.get('showDocumentCheckToast')) {
+            GameState.set('showDocumentCheckToast', false);
+            this.time.delayedCall(250, () => {
+                const toastBg = this.add.rectangle(CENTER_X, 420, 420, 48, 0x05050a, 0.88)
+                    .setStrokeStyle(1, 0x75f6ff, 0.45)
+                    .setDepth(1200);
+                const toastText = this.add.text(CENTER_X, 420, '필수서류 등록 완료', {
+                    fontFamily: 'GALMURI, Arial, sans-serif',
+                    fontSize: '18px',
+                    color: '#f8f3ff',
+                    stroke: '#000000',
+                    strokeThickness: 3
+                }).setOrigin(0.5).setDepth(1201);
+                this.tweens.add({
+                    targets: [toastBg, toastText],
+                    alpha: { from: 1, to: 0 },
+                    duration: 1900,
+                    delay: 700,
+                    onComplete: () => {
+                        toastBg.destroy();
+                        toastText.destroy();
+                    }
+                });
+            });
+        }
+
         this.refreshHud();
     }
 
@@ -160,8 +186,10 @@ export class SealedVaultScene extends Phaser.Scene {
         }
 
         if (id === 'terminal') {
-            if (!GameState.get('hasFoundMissingNdas')) {
-                this.dialogue.say(dialogueData.terminalLocked);
+            const required = GameState.get('requiredNdaCount') ?? 10;
+            const current = GameState.get('currentNdaCount') ?? 0;
+            if (current < required) {
+                this.dialogue.say(`보안서약서가 ${required}장 있어야 PIMS 미니게임을 시작할 수 있습니다.`);
                 return;
             }
             GameState.set('savedPlayerPosition', { x: this.player.x, y: this.player.y });
@@ -235,7 +263,7 @@ export class SealedVaultScene extends Phaser.Scene {
 
         this.dialogue.say([
             { speaker: 'KCA 간사', text: '좋습니다. 금고가 열렸습니다.' },
-            { speaker: 'KCA 간사', text: '이제 2단계로 가시죠.' }
+            { speaker: 'KCA 간사', text: '이제 2단계인 집행의 집에서 사업비를 집행하는 방법을 알아보시죠.' }
         ], () => {
             this.scene.start('ExecutionHouseScene');
         });

@@ -1,11 +1,13 @@
-﻿import * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { ASSETS, getInteractableTextureKey, hasTexture, setLinearTextureFilter } from '../systems/AssetManager.js';
+import { GameState } from '../systems/GameState.js';
 
 export class InteractableObject {
     constructor(scene, config, onInteract) {
         this.id = config.id;
         this.name = config.name;
         this.prompt = config.prompt;
+        this.config = config;
         this.x = config.x;
         this.y = config.y;
         this.onInteract = onInteract;
@@ -35,7 +37,7 @@ export class InteractableObject {
         const bodyAlpha = this.isVault ? 0 : 1;
         this.body = scene.add.rectangle(0, 0, config.width, config.height, bodyColor, bodyAlpha)
             .setStrokeStyle(this.isVault ? 0 : 2, this.isVault ? 0xf0dd9c : 0xffffff, this.isVault ? 0 : 0.35);
-        const labelOffset = this.isVault ? 12 : 10;
+        const labelOffset = this.isVault ? 20 : 10;
         const labelY = config.height / 2 + labelOffset;
         this.label = scene.add.text(0, labelY, config.name, {
             fontFamily: 'GALMURI, Arial, sans-serif',
@@ -43,8 +45,14 @@ export class InteractableObject {
             color: this.isVault ? '#ffe8a8' : '#f6f0ff',
             backgroundColor: 'rgba(18, 12, 34, 0.45)'
         }).setOrigin(0.5);
+        if (this.isVault) {
+            this.vaultGlow = scene.add.graphics();
+        }
 
         this.container.add([this.shadow, this.body]);
+        if (this.vaultGlow) {
+            this.container.add(this.vaultGlow);
+        }
 
         if (this.hideVisuals) {
             this.shadow.setVisible(false);
@@ -52,6 +60,10 @@ export class InteractableObject {
             if (!this.labelOnly) {
                 this.label.setVisible(false);
             }
+        }
+        if (this.isVault) {
+            this.shadow.setVisible(false);
+            this.body.setVisible(false);
         }
 
         if (this.textureKey && hasTexture(scene, this.textureKey)) {
@@ -97,6 +109,19 @@ export class InteractableObject {
     update() {
         this.x = this.container.x;
         this.y = this.container.y;
+        if (this.isVault && this.vaultGlow) {
+            const cleared = Boolean(GameState.get('miniGameCleared'));
+            const opened = Boolean(GameState.get('sealedVaultOpened'));
+            this.vaultGlow.clear();
+            if (cleared && !opened) {
+                const pulse = 0.42 + Math.sin(Date.now() / 250) * 0.12;
+                this.vaultGlow.lineStyle(3, 0xffd36e, pulse);
+                this.vaultGlow.strokeRoundedRect(-this.config.width / 2 - 4, -this.config.height / 2 - 4, this.config.width + 8, this.config.height + 8, 10);
+                this.vaultGlow.lineStyle(6, 0xfff0b6, pulse * 0.10);
+                this.vaultGlow.strokeRoundedRect(-this.config.width / 2 - 10, -this.config.height / 2 - 10, this.config.width + 20, this.config.height + 20, 14);
+            }
+            this.vaultGlow.setVisible(cleared && !opened);
+        }
     }
 
     setAssistantTexture(textureKey) {
@@ -150,6 +175,7 @@ export class InteractableObject {
         this.label?.destroy();
         this.body?.destroy();
         this.shadow?.destroy();
+        this.vaultGlow?.destroy();
         this.container?.destroy();
     }
 }
