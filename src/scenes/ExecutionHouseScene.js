@@ -19,26 +19,25 @@ const HP_LOSS = 8;
 const CATEGORY_ORDER = ['운영비', '사업추진비', '여비', '자산취득비', '반려'];
 const EVIDENCE_KEYS = ['minutes', 'participants', 'signature', 'asset'];
 const EXTRA_ACTION_ORDER = ['minutes', 'participants', 'signature', 'asset', 'none'];
+const DEV_START_WITH_CLASSIFICATION_POPUP = true;
 const CLASSIFICATION_LAYOUT = {
     backdrop: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, width: GAME_WIDTH, height: GAME_HEIGHT },
-    title: { x: CENTER_X, y: 40 },
-    topRowY: 78,
-    leftPanel: { x: 60, y: 115, width: 570, height: 350 },
-    rightPanel: { x: 670, y: 115, width: 550, height: 350 },
-    cardTitle: { x: 84, y: 150 },
-    cardBody: { x: 84, y: 190, width: 500 },
-    statusTitle: { x: 700, y: 150 },
-    statusText: { x: 700, y: 180, width: 248 },
-    stamp: { x: 1120, y: 205 },
-    checklistTitle: { x: 700, y: 240 },
-    checklistNote: { x: 700, y: 266, width: 250 },
-    checklistStartY: 300,
-    checklistGapY: 32,
-    categoryLabelY: 500,
-    categoryButtonsY: 530,
-    actionLabelY: 606,
-    actionButtonsY: 635,
-    feedback: { x: CENTER_X, y: 575, width: 1160 }
+    title: { x: CENTER_X, y: 60 },
+    topRowY: 128,
+    leftPanel: { x: 200, y: 135, width: 500, height: 350 },
+    rightPanel: { x: 655, y: 135, width: 565, height: 350 },
+    sectionHeaderY: 210,
+    cardTitle: { x: 264, y: 250 },
+    cardBody: { x: 264, y: 290, width: 450 },
+    checklistColumnX: 870,
+    checklistHeaderX: 945,
+    checklistStartY: 265,
+    checklistGapY: 48,
+    categoryColumnX: 720,
+    categoryStartY: 267,
+    categoryGapY: 55,
+    actionButtonsY: 667,
+    feedback: { x: CENTER_X, y: 595, width: 850 }
 };
 
 const moneyToNumber = (value) => {
@@ -93,7 +92,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 minutes: false,
                 participants: false,
                 signature: false,
-                asset: Boolean(receipt.asset)
+                asset: false
             },
             classified: false,
             rejected: false,
@@ -107,7 +106,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.drawBackground();
         this.createHud();
         this.createWorld();
-        this.createDoorBanner();
         this.dialogue = new DialogueManager(this, {
             layout: this.bottomHud.getDialogLayout()
         });
@@ -118,9 +116,13 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ENTER', () => this.tryInteract());
         this.input.on('pointerdown', (pointer) => this.handlePointerDown(pointer));
 
-        this.time.delayedCall(300, () => {
-            this.dialogue.say(chapter2Data.introLines, () => this.beginFieldPhase());
-        });
+        if (DEV_START_WITH_CLASSIFICATION_POPUP) {
+            this.openClassificationPopup();
+        } else {
+            this.time.delayedCall(300, () => {
+                this.dialogue.say(chapter2Data.introLines, () => this.beginFieldPhase());
+            });
+        }
 
         this.startTimer();
         this.refreshHud();
@@ -137,14 +139,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         const g = this.add.graphics().setDepth(0);
         g.fillStyle(0x05070f, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        g.fillStyle(0x0b1120, 1).fillRect(0, 0, GAME_WIDTH, 150);
-        g.fillStyle(0x121c31, 1).fillRect(0, 150, GAME_WIDTH, 220);
-        g.fillStyle(0x18243d, 1).fillRect(0, 370, GAME_WIDTH, 150);
-        g.fillStyle(0x0d1426, 1).fillRect(0, 520, GAME_WIDTH, 200);
-        g.fillStyle(0x171329, 1).fillRect(0, 610, GAME_WIDTH, 110);
-        g.fillStyle(0x2bf1d0, 0.08).fillRect(0, 148, GAME_WIDTH, 4);
-        g.fillStyle(0xffd36e, 0.08).fillRect(0, 370, GAME_WIDTH, 4);
-        g.fillStyle(0x6f94ff, 0.08).fillRect(0, 520, GAME_WIDTH, 4);
     }
 
     createHud() {
@@ -195,41 +189,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.interactables = [this.assistant, this.receiptPile, this.pims];
         this.interaction = new InteractionManager(this, this.player, this.interactables, (prompt) => this.bottomHud.setInteractionPrompt(prompt));
 
-        this.decorativeBanners = chapter2Data.decorativeBaskets.map((basket) => this.createDecorationBanner(basket));
-    }
-
-    createDecorationBanner(config) {
-        const container = this.add.container(config.x, config.y).setDepth(2);
-        const shadow = this.add.ellipse(0, 22, config.width * 0.86, 11, 0x000000, 0.22).setScale(1, 0.8);
-        const body = this.add.rectangle(0, 0, config.width, config.height, 0x11172a, 0.78)
-            .setStrokeStyle(2, config.color, 0.38);
-        const label = this.add.text(0, 0, config.label, {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#f8f3ff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-        container.add([shadow, body, label]);
-        return container;
-    }
-
-    createDoorBanner() {
-        this.add.text(CENTER_X, 72, chapter2Data.subtitle, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '38px',
-            color: '#fff4c9',
-            stroke: '#2c1346',
-            strokeThickness: 5,
-            shadow: {
-                offsetX: 2,
-                offsetY: 2,
-                blur: 0,
-                color: '#000000',
-                fill: true,
-                stroke: true
-            }
-        }).setOrigin(0.5).setDepth(1);
+        this.decorativeBanners = [];
     }
 
     update() {
@@ -356,26 +316,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        const target = {
-            x: chapter2Data.receiptPile.x - 66,
-            y: chapter2Data.receiptPile.y + 48
-        };
-
         this.stagePhase = 'receiptApproach';
         GameState.set('stage2Phase', 'receiptApproach');
         this.bottomHud.setInteractionPrompt(chapter2Data.receiptPilePrompt);
         this.bottomHud.refresh();
-        this.movePlayerTo(target, () => {
-            this.showActionPanel({
-                title: chapter2Data.receiptStartLabel,
-                hint: chapter2Data.receiptStartHint,
-                buttonLabel: chapter2Data.receiptStartLabel,
-                onClick: () => this.openClassificationPopup(),
-                color: 0xffd36e,
-                x: chapter2Data.receiptPile.x + 92,
-                y: chapter2Data.receiptPile.y - 10
-            });
-        });
+        this.openClassificationPopup();
     }
 
     handlePimsInteract() {
@@ -393,26 +338,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        const target = {
-            x: chapter2Data.pims.x - 72,
-            y: chapter2Data.pims.y + 72
-        };
-
         this.stagePhase = 'pimsApproach';
         GameState.set('stage2Phase', 'pimsApproach');
         this.bottomHud.setInteractionPrompt(chapter2Data.pimsHint);
         this.bottomHud.refresh();
-        this.movePlayerTo(target, () => {
-            this.showActionPanel({
-                title: chapter2Data.pimsStartLabel,
-                hint: chapter2Data.pimsStartHint,
-                buttonLabel: chapter2Data.pimsStartLabel,
-                onClick: () => this.openRegistrationPopup(),
-                color: 0x75f6ff,
-                x: chapter2Data.pims.x - 20,
-                y: chapter2Data.pims.y + 10
-            });
-        });
+        this.openRegistrationPopup();
     }
 
     movePlayerTo(target, onArrive) {
@@ -486,48 +416,46 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
     createClassificationPopup() {
         const layout = CLASSIFICATION_LAYOUT;
-        const backdrop = this.add.rectangle(layout.backdrop.x, layout.backdrop.y, layout.backdrop.width, layout.backdrop.height, 0x050816, 0.96)
+        const backdrop = hasTexture(this, ASSETS.backgrounds.executionHouseClassification.key)
+            ? this.add.image(layout.backdrop.x, layout.backdrop.y, ASSETS.backgrounds.executionHouseClassification.key)
+                .setOrigin(0.5)
+                .setDisplaySize(layout.backdrop.width, layout.backdrop.height)
+                .setDepth(1000)
+            : this.add.rectangle(layout.backdrop.x, layout.backdrop.y, layout.backdrop.width, layout.backdrop.height, 0x050816, 0.92)
+                .setOrigin(0.5)
+                .setDepth(1000);
+        const leftPanel = this.add.rectangle(layout.leftPanel.x + layout.leftPanel.width / 2, layout.leftPanel.y + layout.leftPanel.height / 2, layout.leftPanel.width, layout.leftPanel.height, 0x11172a, 0)
             .setOrigin(0.5)
-            .setDepth(1000);
-        const topBand = this.add.rectangle(layout.backdrop.x, 36, GAME_WIDTH, 88, 0x091022, 0.92)
-            .setOrigin(0.5)
+            .setStrokeStyle(2, 0xffd36e, 0)
             .setDepth(1001);
-        const leftPanel = this.add.rectangle(layout.leftPanel.x + layout.leftPanel.width / 2, layout.leftPanel.y + layout.leftPanel.height / 2, layout.leftPanel.width, layout.leftPanel.height, 0x11172a, 0.96)
+        const rightPanel = this.add.rectangle(layout.rightPanel.x + layout.rightPanel.width / 2, layout.rightPanel.y + layout.rightPanel.height / 2, layout.rightPanel.width, layout.rightPanel.height, 0x11172a, 0)
             .setOrigin(0.5)
-            .setStrokeStyle(2, 0xffd36e, 0.34)
+            .setStrokeStyle(2, 0x75f6ff, 0)
             .setDepth(1001);
-        const rightPanel = this.add.rectangle(layout.rightPanel.x + layout.rightPanel.width / 2, layout.rightPanel.y + layout.rightPanel.height / 2, layout.rightPanel.width, layout.rightPanel.height, 0x11172a, 0.96)
+        const rightPanelDivider = this.add.rectangle(layout.rightPanelDividerX || 928, layout.rightPanel.y + layout.rightPanel.height / 2, 2, layout.rightPanel.height - 20, 0x75f6ff, 0.22)
             .setOrigin(0.5)
-            .setStrokeStyle(2, 0x75f6ff, 0.34)
+            .setAlpha(0)
             .setDepth(1001);
-        const bottomBand = this.add.rectangle(layout.backdrop.x, layout.feedback.y, layout.feedback.width, 52, 0x05050a, 0.78)
+        const bottomBand = this.add.rectangle(layout.backdrop.x, layout.feedback.y, layout.feedback.width, 52, 0x05050a, 0)
             .setOrigin(0.5)
-            .setStrokeStyle(1, 0x2be8ff, 0.22)
+            .setStrokeStyle(1, 0x2be8ff, 0)
             .setDepth(1001);
-        const title = this.add.text(layout.title.x, layout.title.y, '영수증 폭풍 : 비세목 분류 대작전', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '32px',
-            color: '#fff4c9',
-            stroke: '#2c1346',
-            strokeThickness: 4
-        }).setOrigin(0.5).setDepth(1002);
-
-        const progressText = this.add.text(54, layout.topRowY, '', {
+        const progressText = this.add.text(244, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef'
         }).setDepth(1002);
-        const timerText = this.add.text(260, layout.topRowY, '', {
+        const timerText = this.add.text(410, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#fff5c7'
         }).setDepth(1002);
-        const hpText = this.add.text(470, layout.topRowY, '', {
+        const hpText = this.add.text(620, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#ffd36e'
         }).setDepth(1002);
-        const summaryText = this.add.text(675, layout.topRowY, '', {
+        const summaryText = this.add.text(830, layout.topRowY, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#c9ffef'
@@ -535,54 +463,21 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         const cardTitle = this.add.text(layout.cardTitle.x, layout.cardTitle.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '24px',
+            fontSize: '18px',
+            fontStyle: 'bold',
             color: '#fff5c7'
-        }).setDepth(1002);
+        }).setOrigin(0, 0.5).setDepth(1002);
         const cardBody = this.add.text(layout.cardBody.x, layout.cardBody.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
-            color: '#f8f3ff',
+            color: '#000000',
             wordWrap: { width: layout.cardBody.width },
             lineSpacing: 8
         }).setDepth(1002);
 
-        const statusTitle = this.add.text(layout.statusTitle.x, layout.statusTitle.y, '처리 상태', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '20px',
-            color: '#c9ffef'
-        }).setDepth(1002);
-        const statusText = this.add.text(layout.statusText.x, layout.statusText.y, '', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
-            color: '#f8f3ff',
-            wordWrap: { width: layout.statusText.width },
-            lineSpacing: 8
-        }).setDepth(1002);
-        const stampText = this.add.text(layout.stamp.x, layout.stamp.y, '', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '26px',
-            color: '#ffd36e',
-            stroke: '#000000',
-            strokeThickness: 4,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(1002);
-
-        const checklistTitle = this.add.text(layout.checklistTitle.x, layout.checklistTitle.y, '필요 추가 처리', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
-            color: '#c9ffef'
-        }).setDepth(1002);
-        const checklistNote = this.add.text(layout.checklistNote.x, layout.checklistNote.y, '추가 처리 항목을 선택하세요.', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#f8f3ff',
-            wordWrap: { width: layout.checklistNote.width },
-            lineSpacing: 6
-        }).setDepth(1002);
-
         const messageText = this.add.text(layout.feedback.x, layout.feedback.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
+            fontSize: '19px',
             color: '#c9ffef',
             align: 'center',
             wordWrap: { width: 1100 },
@@ -592,102 +487,96 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.popupContainer = this.add.container(0, 0).setDepth(1000);
         this.popupContainer.add([
             backdrop,
-            topBand,
             leftPanel,
             rightPanel,
+            rightPanelDivider,
             bottomBand,
-            title,
             progressText,
             timerText,
             hpText,
             summaryText,
             cardTitle,
             cardBody,
-            statusTitle,
-            statusText,
-            stampText,
-            checklistTitle,
-            checklistNote,
             messageText
         ]);
 
-        this.popupNodes = [backdrop, topBand, leftPanel, rightPanel, bottomBand, title, progressText, timerText, hpText, summaryText, cardTitle, cardBody, statusTitle, statusText, stampText, checklistTitle, checklistNote, messageText];
+        this.popupNodes = [backdrop, leftPanel, rightPanel, rightPanelDivider, bottomBand, progressText, timerText, hpText, summaryText, cardTitle, cardBody, messageText];
         this.popupProgressText = progressText;
         this.popupTimerText = timerText;
         this.popupHpText = hpText;
         this.popupSummaryText = summaryText;
         this.popupCardTitle = cardTitle;
         this.popupCardBody = cardBody;
-        this.popupStatusText = statusText;
-        this.popupStampText = stampText;
+        this.popupStatusText = null;
+        this.popupStampText = null;
         this.popupMessageText = messageText;
-        this.popupChecklistNote = checklistNote;
+        this.popupChecklistNote = null;
 
         this.classificationCategoryButtons = [];
         this.classificationActionButtons = {};
         this.classificationChecklistRows = {};
 
-        this.add.text(92, layout.categoryLabelY, '1. 비세목 선택', {
+        this.add.text(layout.categoryColumnX, layout.sectionHeaderY, '1. 비세목 구분', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
+            fontSize: '18px',
+            fontStyle: 'bold',
             color: '#fff4c9'
-        }).setDepth(1002);
+        }).setOrigin(0.5, 0.5).setDepth(1002);
         CATEGORY_ORDER.forEach((label, index) => {
-            const button = this.createButton(this.popupContainer, 92 + index * 212, layout.categoryButtonsY, label, () => this.selectCategory(label), {
-                width: 194,
-                height: 46,
+            const button = this.createButton(this.popupContainer, layout.categoryColumnX, layout.categoryStartY + index * layout.categoryGapY, label, () => this.selectCategory(label), {
+                width: 205,
+                height: 44,
                 fontSize: 18,
-                depth: 1002
+                depth: 1002,
+                flat: true,
+                fillAlpha: 0.18
             });
             this.classificationCategoryButtons.push({ label, ...button });
         });
 
-        this.classificationChecklistRows.minutes = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY, '회의록 첨부', () => this.toggleEvidence('minutes'), {
-            width: 260,
-            depth: 1002
-        });
-        this.classificationChecklistRows.participants = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY, '참여명단 첨부', () => this.toggleEvidence('participants'), {
-            width: 260,
-            depth: 1002
-        });
-        this.classificationChecklistRows.signature = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 2, '서명 증빙 첨부', () => this.toggleEvidence('signature'), {
-            width: 260,
-            depth: 1002
-        });
-        this.classificationChecklistRows.asset = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 3, 'PIMS 자산등록', () => this.toggleEvidence('asset'), {
-            width: 260,
-            depth: 1002
-        });
-        this.classificationChecklistRows.none = this.createChecklistRow(this.popupContainer, layout.checklistTitle.x, layout.checklistStartY + layout.checklistGapY * 4, '추가 증빙 없음', () => this.toggleEvidence('none'), {
-            width: 260,
-            depth: 1002
-        });
-
-        this.classificationActionLabel = this.add.text(92, layout.actionLabelY, '2. 처리', {
+        this.add.text(layout.checklistHeaderX, layout.sectionHeaderY, '2. 추가 업무', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
-            color: '#fff5c7'
-        }).setDepth(1002);
-        this.classificationActionButtons.complete = this.createButton(this.popupContainer, 300, layout.actionButtonsY, '분류 완료', () => this.completeCurrentReceipt(), {
-            width: 240,
-            height: 52,
-            fontSize: 19,
+            fontSize: '18px',
+            fontStyle: 'bold',
+            color: '#fff4c9'
+        }).setOrigin(0.5, 0.5).setDepth(1002);
+        this.classificationChecklistRows.minutes = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY, '회의록 첨부', () => this.toggleEvidence('minutes'), {
+            width: 222,
             depth: 1002
         });
-        this.classificationActionButtons.reject = this.createButton(this.popupContainer, 580, layout.actionButtonsY, '반려 처리', () => this.rejectCurrentReceipt(), {
-            width: 240,
-            height: 52,
-            fontSize: 19,
+        this.classificationChecklistRows.participants = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY, '참여명단 첨부', () => this.toggleEvidence('participants'), {
+            width: 222,
             depth: 1002
         });
-        this.classificationActionButtons.refresh = this.createButton(this.popupContainer, 860, layout.actionButtonsY, '다시 보기', () => this.refreshClassificationPopup(), {
-            width: 240,
-            height: 52,
-            fontSize: 19,
+        this.classificationChecklistRows.signature = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 2, '서명 증빙 첨부', () => this.toggleEvidence('signature'), {
+            width: 222,
+            depth: 1002
+        });
+        this.classificationChecklistRows.asset = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 3, 'PIMS 자산등록', () => this.toggleEvidence('asset'), {
+            width: 222,
+            depth: 1002
+        });
+        this.classificationChecklistRows.none = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 4, '추가 증빙 없음', () => this.toggleEvidence('none'), {
+            width: 222,
             depth: 1002
         });
 
-        this.classificationActionLabel?.setVisible?.(true);
+        this.classificationActionButtons.complete = this.createButton(this.popupContainer, 490, layout.actionButtonsY, '분류 완료', () => this.completeCurrentReceipt(), {
+            width: 231,
+            height: 46,
+            fontSize: 23,
+            depth: 1002,
+            flat: true,
+            fillAlpha: 0.34
+        });
+        this.classificationActionButtons.reset = this.createButton(this.popupContainer, 790, layout.actionButtonsY, '선택 초기화', () => this.resetCurrentReceiptSelection(), {
+            width: 231,
+            height: 46,
+            fontSize: 23,
+            depth: 1002,
+            flat: true,
+            fillAlpha: 0.34
+        });
     }
 
     refreshClassificationPopup() {
@@ -701,8 +590,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         if (!receipt) {
             this.popupCardTitle.setText('영수증 분류 완료');
             this.popupCardBody.setText('모든 영수증을 처리했습니다.');
-            this.popupStatusText.setText('이제 PIMS 단말기로 이동하세요.');
-            this.popupStampText.setText('');
             this.popupProgressText.setText(`처리 현황: ${this.processedCount}/${RECEIPT_TOTAL}`);
             this.popupTimerText.setText(`D-${this.timerDays}`);
             this.popupHpText.setText(`HP: ${GameState.get('hp')} / 100`);
@@ -724,8 +611,8 @@ export class ExecutionHouseScene extends Phaser.Scene {
             `사용 시간: ${receipt.useTime}`,
             `금액: ${receipt.amount}`
         ].join('\n'));
-        this.popupStampText.setText(receipt.rejected ? '반려 완료' : receipt.classified ? '분류 완료' : '');
-        this.popupMessageText.setText('영수증 정보를 보고 비세목과 추가 처리를 판단하세요.');
+        this.popupMessageText.setY(CLASSIFICATION_LAYOUT.feedback.y + 1);
+        this.popupMessageText.setText('영수증 정보를 보고 비세목과 추가 업무를 판단하세요.');
     }
 
     updateClassificationPopupControls(receipt) {
@@ -796,15 +683,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         }
 
         this.classificationActionButtons?.complete?.setEnabled?.(Boolean(receipt && selected !== '미선택' && selected !== '반려'));
-        this.classificationActionButtons?.reject?.setEnabled?.(true);
-        this.classificationActionButtons?.refresh?.setEnabled?.(true);
-
-        if (this.popupStatusText) {
-            this.popupStatusText.setText([
-                `선택 비세목: ${selected}`,
-                `PIMS 등록 상태: ${registrationState}`
-            ].join('\n'));
-        }
+        this.classificationActionButtons?.reset?.setEnabled?.(Boolean(receipt));
 
         if (this.popupMessageText && receipt) {
             this.popupMessageText.setText('체크박스를 눌러 추가 처리 후 분류 완료를 누르세요.');
@@ -1020,6 +899,21 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         receipt.selectedCategory = '반려';
         this.completeCurrentReceipt();
+    }
+
+    resetCurrentReceiptSelection() {
+        const receipt = this.getCurrentReceipt();
+        if (!receipt || this.popupMode !== 'classification') {
+            return;
+        }
+
+        receipt.selectedCategory = null;
+        receipt.evidenceFlags.minutes = false;
+        receipt.evidenceFlags.participants = false;
+        receipt.evidenceFlags.signature = false;
+        receipt.evidenceFlags.none = false;
+        receipt.assetRegistered = false;
+        this.refreshClassificationPopup();
     }
 
     applyWrongAnswer(message, receipt = null) {
@@ -1343,7 +1237,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
     showActionPanel({ title, hint, buttonLabel, onClick, color = 0xffd36e, x = chapter2Data.receiptPile.x + 92, y = chapter2Data.receiptPile.y - 10 }) {
         this.clearActionPanel();
-        this.bottomHud.setInteractionVisible(false);
         this.actionPanel = this.add.container(0, 0).setDepth(960);
         const panelX = x;
         const panelY = y;
@@ -1579,10 +1472,16 @@ export class ExecutionHouseScene extends Phaser.Scene {
         const height = options.height || 56;
         const fontSize = options.fontSize || 20;
         const depth = options.depth || 110;
+        const flat = Boolean(options.flat);
+        const fillAlpha = options.fillAlpha ?? 1;
         let bg;
         let hoverBg = null;
 
-        if (this.textures.exists('ui_button_normal')) {
+        if (flat) {
+            bg = this.add.rectangle(x, y, width, height, 0x24183f, fillAlpha)
+                .setStrokeStyle(0, 0x000000, 0)
+                .setDepth(depth);
+        } else if (this.textures.exists('ui_button_normal')) {
             bg = this.add.image(x, y, 'ui_button_normal').setDisplaySize(width, height).setDepth(depth);
             if (this.textures.exists('ui_button_hover')) {
                 hoverBg = this.add.image(x, y, 'ui_button_hover').setDisplaySize(width, height).setVisible(false).setDepth(depth);
@@ -1600,6 +1499,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(depth + 1);
 
         const hit = this.add.rectangle(x, y, width, height, 0x000000, 0).setDepth(depth).setInteractive({ useHandCursor: true });
+        let selectedState = false;
         const select = (_pointer, _localX, _localY, event) => {
             event?.stopPropagation?.();
             onClick?.();
@@ -1609,7 +1509,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 bg.setVisible(false);
                 hoverBg.setVisible(true);
             } else if (bg.setFillStyle) {
-                bg.setFillStyle(0x322159);
+                if (selectedState) {
+                    bg.setFillStyle(0x7860b4, 0.54);
+                } else {
+                    bg.setFillStyle(0x7e5ed4, flat ? Math.min(fillAlpha + 0.34, 0.62) : 1);
+                }
             }
         });
         hit.on('pointerout', () => {
@@ -1617,7 +1521,11 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 bg.setVisible(true);
                 hoverBg.setVisible(false);
             } else if (bg.setFillStyle) {
-                bg.setFillStyle(0x24183f);
+                if (selectedState) {
+                    bg.setFillStyle(0x7860b4, 0.54);
+                } else {
+                    bg.setFillStyle(0x24183f, fillAlpha);
+                }
             }
         });
         hit.on('pointerdown', select);
@@ -1641,37 +1549,37 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 enabled = Boolean(nextEnabled);
                 if (enabled) {
                     hit?.setInteractive?.({ useHandCursor: true });
-                    bg?.setAlpha?.(1);
+                    bg?.setAlpha?.(flat ? fillAlpha : 1);
                     hoverBg?.setAlpha?.(1);
                     text?.setAlpha?.(1);
                 } else {
                     hit?.disableInteractive?.();
-                    bg?.setAlpha?.(0.42);
+                    bg?.setAlpha?.(flat ? 0.24 : 0.42);
                     hoverBg?.setAlpha?.(0.42);
                     text?.setAlpha?.(0.56);
                     hoverBg?.setVisible?.(false);
                 }
             },
             setSelected: (selected) => {
+                selectedState = Boolean(selected);
                 if (!enabled) {
                     return;
                 }
                 if (selected) {
-                    if (bg?.setTint) {
-                        bg.setTint(0xdbe9ff);
+                    text?.setColor?.('#fff8dc');
+                    text?.setFontStyle?.('bold');
+                    text?.setStroke?.('#24163d', 6);
+                    if (flat) {
+                        bg?.setFillStyle?.(0x7c63b8, 0.54);
+                        bg?.setAlpha?.(1);
                     }
-                    if (hoverBg?.setTint) {
-                        hoverBg.setTint(0xdbe9ff);
-                    }
-                    text?.setColor?.('#1b2140');
                 } else {
-                    if (bg?.clearTint) {
-                        bg.clearTint();
-                    }
-                    if (hoverBg?.clearTint) {
-                        hoverBg.clearTint();
-                    }
                     text?.setColor?.('#ffffff');
+                    text?.setFontStyle?.('normal');
+                    text?.setStroke?.('#000000', 4);
+                    if (flat) {
+                        bg?.setFillStyle?.(0x24183f, fillAlpha);
+                    }
                 }
             }
         };
@@ -1681,18 +1589,18 @@ export class ExecutionHouseScene extends Phaser.Scene {
         const width = options.width || 246;
         const depth = options.depth || 1002;
         const row = this.add.container(x, y).setDepth(depth);
-        const box = this.add.rectangle(0, 0, 18, 18, 0x11172a, 1)
+        const box = this.add.rectangle(9, 0, 20, 20, 0x11172a, 1)
             .setStrokeStyle(2, 0x75f6ff, 0.9);
-        const mark = this.add.text(0, 0, '', {
+        const mark = this.add.text(9, 0, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '16px',
+            fontSize: '18px',
             color: '#fff5c7',
             stroke: '#000000',
             strokeThickness: 2
         }).setOrigin(0.5);
         const text = this.add.text(26, 0, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
+            fontSize: '17px',
             color: '#f8f3ff'
         }).setOrigin(0, 0.5);
         const hit = this.add.rectangle(width / 2, 0, width, 26, 0x000000, 0)
@@ -1755,4 +1663,3 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.bottomHud.refresh();
     }
 }
-

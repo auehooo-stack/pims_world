@@ -42,7 +42,7 @@ export class InteractableObject {
         this.label = scene.add.text(0, labelY, config.name, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
-            color: this.isVault ? '#ffe8a8' : '#f6f0ff',
+            color: '#f8f3ff',
             backgroundColor: 'rgba(18, 12, 34, 0.45)'
         }).setOrigin(0.5);
         if (this.isVault) {

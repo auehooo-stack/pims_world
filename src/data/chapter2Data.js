@@ -6,10 +6,10 @@ export const chapter2Data = {
     timerDays: 15,
     timerTickMs: 5000,
     walkableArea: { x: 56, y: 150, width: GAME_WIDTH - 112, height: GAME_HEIGHT - 236 },
-    playerStart: { x: 160, y: 470 },
-    assistant: { x: 320, y: 420, width: 92, height: 118 },
-    receiptPile: { x: 505, y: 392, width: 126, height: 96 },
-    pims: { x: 1088, y: 326, width: 178, height: 220 },
+    playerStart: { x: 450, y: 480 },
+    assistant: { x: 680, y: 460, width: 98, height: 135 },
+    receiptPile: { x: 185, y: 442, width: 300, height: 150 },
+    pims: { x: 1130, y: 442, width: 126, height: 150 },
     decorativeBaskets: [
         { id: 'operating', label: '운영비', x: 610, y: 428, width: 92, height: 46, color: 0x39e6c0 },
         { id: 'promotion', label: '사업추진비', x: 718, y: 428, width: 92, height: 46, color: 0xffc86e },
@@ -19,8 +19,8 @@ export const chapter2Data = {
     ],
     introLines: [
         { speaker: 'KCA 간사', text: '김대리님, 여기는 집행의 집입니다.' },
-        { speaker: 'KCA 간사', text: '바닥의 영수증은 이미지처럼 보이기만 하고, 주우면 상세 내용이 펼쳐집니다.' },
-        { speaker: 'KCA 간사', text: '운영비, 사업추진비, 자산취득비, 여비, 반려로 나눠 넣으세요. 자산취득비는 PIMS 등록이 먼저입니다.' }
+        { speaker: 'KCA 간사', text: '영수증 더미에서 사업비 집행 영수증을 찾아 비세목을 분류하고,\n필요한 증빙까지 함께 정리해주세요.' },
+        { speaker: 'KCA 간사', text: '운영비, 사업추진비, 자산취득비, 여비, 반려로 구분하세요. \n힌트를 드리자면, 취득자산은 꼭 PIMS에 등록하셔야 합니다.' }
     ],
     assistantHint: 'Space: KCA 간사와 대화',
     receiptPilePrompt: 'Space: 영수증 더미 확인',

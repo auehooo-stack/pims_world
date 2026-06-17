@@ -54,8 +54,8 @@ export class Player extends Phaser.GameObjects.Rectangle {
         this.nameText = scene.add.text(x, y + 52, '김대리', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
-            color: '#ffffff',
-            backgroundColor: 'rgba(23, 16, 36, 0.45)'
+            color: '#f8f3ff',
+            backgroundColor: 'rgba(18, 12, 34, 0.45)'
         }).setOrigin(0.5).setDepth(3);
     }
 

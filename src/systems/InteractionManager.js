@@ -7,7 +7,7 @@ export class InteractionManager {
         this.interactables = interactables;
         this.promptTarget = promptTarget;
         this.current = null;
-        this.range = 72;
+        this.range = 132;
     }
 
     update(blocked) {
