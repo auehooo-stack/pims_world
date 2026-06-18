@@ -30,11 +30,14 @@ export const chapter2Data = {
     pimsStartLabel: 'PIMS 등록하기',
     pimsStartHint: '분류한 영수증을 PIMS에 등록하세요.',
     bonusWaveLines: [
-        { speaker: 'KCA 간사', text: '아차! 대리님, 여기 영수증 뭉치가 더 있네요!' },
-        { speaker: 'KCA 간사', text: '추가 영수증 4건이 도착했습니다. 차근차근 확인해보시죠.' }
+        { speaker: 'KCA 간사', text: '아차! 대리님, 여기 영수증이 더 있네요!' },
+        { speaker: 'KCA 간사', text: '이것까지 한번 분류해보시죠!' }
     ],
     registrationPromptLines: [
         { speaker: 'KCA 간사', text: '분류는 끝났습니다. 이제 PIMS 단말기로 이동해 등록하세요.' }
+    ],
+    registrationCompleteLines: [
+        { speaker: 'KCA 간사', text: '집행등록이 끝났습니다. 이제 다음 단계로 넘어가시죠.' }
     ],
     assetReminder: '자산취득비는 PIMS 자산등록이 먼저입니다.',
     assetRegistered: '자산 등록 완료! 이제 집행 등록을 진행하세요.',
@@ -61,7 +64,7 @@ export const chapter2Data = {
             note: '소모성 사무용품은 자산취득비가 아닙니다.',
             correctCategory: '운영비',
             evidence: [],
-            requiredExtraActions: ['none']
+            requiredExtraActions: []
         },
         {
             id: 'r2',
@@ -87,7 +90,7 @@ export const chapter2Data = {
             note: '출장 이동에 따른 여비입니다.',
             correctCategory: '여비',
             evidence: [],
-            requiredExtraActions: ['none']
+            requiredExtraActions: []
         },
         {
             id: 'r4',
@@ -131,7 +134,7 @@ export const chapter2Data = {
         },
         {
             id: 'r7',
-            title: '고액 자문회의 식대',
+            title: '자문회의 식대',
             itemName: '외부위원 자문회의 식대',
             purpose: '외부위원 자문회의 진행',
             expenseDate: '5월 16일',
@@ -158,13 +161,13 @@ export const chapter2Data = {
         },
         {
             id: 'r9',
-            title: '심야 회의비 영수증',
+            title: '사업 회의비 영수증',
             itemName: '회의 식대',
             purpose: '사업 추진 회의 진행',
             expenseDate: '5월 18일',
             useTime: '23:40',
             amount: '180,000원',
-            note: '심야시간 집행은 반려 대상입니다.',
+            note: '심야시간 집행은 불인정 대상입니다.',
             correctCategory: '반려',
             invalid: true,
             requiredExtraActions: []
@@ -177,10 +180,10 @@ export const chapter2Data = {
             expenseDate: '5월 19일',
             useTime: '14:00',
             amount: '300,000원',
-            note: '회의비가 아닌 자문 수당입니다.',
+            note: '회의비가 아닌 일반수용비입니다.',
             correctCategory: '운영비',
             evidence: [],
-            requiredExtraActions: ['none']
+            requiredExtraActions: []
         }
     ]
 };

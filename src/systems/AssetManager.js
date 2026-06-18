@@ -77,6 +77,9 @@ export const ASSETS = {
         buttonNormal: image('ui_button_normal', '/assets/ui/button_normal.png'),
         buttonHover: image('ui_button_hover', '/assets/ui/button_hover.png'),
         dialogNextIndicator: image('ui_dialog_next_indicator', '/assets/ui/dialog/dialog_next_indicator.png')
+        ,
+        stampComplete: image('ui_stamp_complete', '/assets/ui/stamps/classification_complete.png'),
+        stampRejected: image('ui_stamp_rejected', '/assets/ui/stamps/rejected.png')
     },
     opening: {
         warningBackground: image('ui_opening_warning_background', '/assets/opening/warning_background.png'),

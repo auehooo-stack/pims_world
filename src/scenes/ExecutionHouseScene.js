@@ -18,8 +18,8 @@ const HP_LOSS = 8;
 
 const CATEGORY_ORDER = ['운영비', '사업추진비', '여비', '자산취득비', '반려'];
 const EVIDENCE_KEYS = ['minutes', 'participants', 'signature', 'asset'];
-const EXTRA_ACTION_ORDER = ['minutes', 'participants', 'signature', 'asset', 'none'];
-const DEV_START_WITH_CLASSIFICATION_POPUP = true;
+const EXTRA_ACTION_ORDER = ['minutes', 'participants', 'signature', 'asset'];
+const DEV_START_WITH_CLASSIFICATION_POPUP = false;
 const CLASSIFICATION_LAYOUT = {
     backdrop: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, width: GAME_WIDTH, height: GAME_HEIGHT },
     title: { x: CENTER_X, y: 60 },
@@ -63,6 +63,14 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.pendingPimsReceipts = [];
         this.popupNodes = [];
         this.actionNodes = [];
+        this.pendingBonusAdvanceReceipt = null;
+        this.bonusWaveActive = false;
+        this.bonusWaveActor = null;
+        this.bonusWaveBubble = null;
+        this.bonusWaveBubbleLines = [];
+        this.bonusWaveBubbleIndex = 0;
+        this.bonusWaveBubbleHitArea = null;
+        this.bonusWaveDrops = [];
     }
 
     create() {
@@ -159,29 +167,33 @@ export class ExecutionHouseScene extends Phaser.Scene {
             animated: true
         }, () => this.handleAssistantInteract());
 
-        this.receiptPile = new InteractableObject(this, {
-            id: 'receipt',
-            name: '영수증 더미',
-            prompt: chapter2Data.receiptPilePrompt,
-            x: chapter2Data.receiptPile.x,
-            y: chapter2Data.receiptPile.y,
-            width: chapter2Data.receiptPile.width,
-            height: chapter2Data.receiptPile.height,
-            color: 0xffd36e,
-            animated: false
-        }, () => this.handleReceiptPileInteract());
+          this.receiptPile = new InteractableObject(this, {
+              id: 'receipt',
+              name: '영수증 더미',
+              prompt: chapter2Data.receiptPilePrompt,
+              x: chapter2Data.receiptPile.x,
+              y: chapter2Data.receiptPile.y,
+              width: chapter2Data.receiptPile.width,
+              height: chapter2Data.receiptPile.height,
+              color: 0xffd36e,
+              animated: false,
+              hideVisuals: true,
+              labelOnly: true
+          }, () => this.handleReceiptPileInteract());
 
-        this.pims = new InteractableObject(this, {
-            id: 'terminal',
-            name: 'PIMS 단말기',
-            prompt: chapter2Data.pimsHint,
-            x: chapter2Data.pims.x,
-            y: chapter2Data.pims.y,
-            width: chapter2Data.pims.width,
-            height: chapter2Data.pims.height,
-            color: 0x22e6a8,
-            animated: false
-        }, () => this.handlePimsInteract());
+          this.pims = new InteractableObject(this, {
+              id: 'terminal',
+              name: 'PIMS 단말기',
+              prompt: chapter2Data.pimsHint,
+              x: chapter2Data.pims.x,
+              y: chapter2Data.pims.y,
+              width: chapter2Data.pims.width,
+              height: chapter2Data.pims.height,
+              color: 0x22e6a8,
+              animated: false,
+              hideVisuals: true,
+              labelOnly: true
+          }, () => this.handlePimsInteract());
 
         this.player = new Player(this, chapter2Data.playerStart.x, chapter2Data.playerStart.y);
         this.player.speed = 260;
@@ -328,21 +340,12 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        if (this.stagePhase !== 'pimsApproach' && this.stagePhase !== 'registration') {
-            this.showPopupNotice('먼저 분류를 완료한 뒤 PIMS 등록으로 이동하세요.', 0xffd36e);
-            return;
-        }
-
         if (!this.receipts.every((receipt) => receipt.classified || receipt.rejected)) {
             this.showPopupNotice('아직 분류되지 않은 영수증이 있습니다.', 0xffd36e);
             return;
         }
 
-        this.stagePhase = 'pimsApproach';
-        GameState.set('stage2Phase', 'pimsApproach');
-        this.bottomHud.setInteractionPrompt(chapter2Data.pimsHint);
-        this.bottomHud.refresh();
-        this.openRegistrationPopup();
+        this.autoCompletePimsRegistration();
     }
 
     movePlayerTo(target, onArrive) {
@@ -463,17 +466,81 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         const cardTitle = this.add.text(layout.cardTitle.x, layout.cardTitle.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
+            fontSize: '21px',
             fontStyle: 'bold',
-            color: '#fff5c7'
+            color: '#6d3f17'
         }).setOrigin(0, 0.5).setDepth(1002);
-        const cardBody = this.add.text(layout.cardBody.x, layout.cardBody.y, '', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '17px',
-            color: '#000000',
-            wordWrap: { width: layout.cardBody.width },
-            lineSpacing: 8
-        }).setDepth(1002);
+        const cardBody = this.add.container(layout.cardBody.x, layout.cardBody.y).setDepth(1002);
+        cardBody.setText = (text) => {
+            cardBody.removeAll(true);
+            const raw = String(text ?? '');
+            if (!raw.trim()) {
+                return;
+            }
+
+            if (raw === '모든 영수증을 처리했습니다.') {
+                const doneText = this.add.text(0, 0, raw, {
+                    fontFamily: 'GALMURI, Arial, sans-serif',
+                    fontSize: '19px',
+                    fontStyle: 'bold',
+                    color: '#000000',
+                    wordWrap: { width: layout.cardBody.width }
+                }).setDepth(1002);
+                cardBody.add(doneText);
+                return;
+            }
+
+            const rows = raw.split('\n').filter(Boolean);
+            let y = 0;
+            rows.forEach((line) => {
+                const match = line.match(/^(품목|사용 목적|집행일|사용 시간|금액):\s*(.*)$/);
+                if (match) {
+                    if (match[1] === '사용 목적') {
+                        const label = this.add.text(0, y, `${match[1]} :`, {
+                            fontFamily: 'GALMURI, Arial, sans-serif',
+                            fontSize: '19px',
+                            fontStyle: 'bold',
+                            color: '#000000'
+                        }).setDepth(1002);
+                        const value = this.add.text(0, y + 28, match[2] || '', {
+                            fontFamily: 'GALMURI, Arial, sans-serif',
+                            fontSize: '19px',
+                            color: '#000000',
+                            wordWrap: { width: layout.cardBody.width }
+                        }).setDepth(1002);
+                        cardBody.add([label, value]);
+                        y += 64;
+                    } else {
+                        const label = this.add.text(0, y, `${match[1]} :`, {
+                            fontFamily: 'GALMURI, Arial, sans-serif',
+                            fontSize: '19px',
+                            fontStyle: 'bold',
+                            color: '#000000'
+                        }).setDepth(1002);
+                        const valueX = match[1] === '사용 시간'
+                            ? 108
+                            : (match[1] === '집행일' ? 86 : 62);
+                        const value = this.add.text(valueX, y, match[2] || '', {
+                            fontFamily: 'GALMURI, Arial, sans-serif',
+                            fontSize: '19px',
+                            color: '#000000',
+                            wordWrap: { width: layout.cardBody.width - valueX }
+                        }).setDepth(1002);
+                        cardBody.add([label, value]);
+                        y += 36;
+                    }
+                } else {
+                    const normal = this.add.text(0, y, line, {
+                        fontFamily: 'GALMURI, Arial, sans-serif',
+                        fontSize: '19px',
+                        color: '#000000',
+                        wordWrap: { width: layout.cardBody.width }
+                    }).setDepth(1002);
+                    cardBody.add(normal);
+                    y += 36;
+                }
+            });
+        };
 
         const messageText = this.add.text(layout.feedback.x, layout.feedback.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
@@ -483,6 +550,16 @@ export class ExecutionHouseScene extends Phaser.Scene {
             wordWrap: { width: 1100 },
             lineSpacing: 4
         }).setOrigin(0.5).setDepth(1002);
+        const stampImage = this.add.image(
+            layout.leftPanel.x + layout.leftPanel.width - 176,
+            layout.leftPanel.y + layout.leftPanel.height - 24,
+            ASSETS.ui.stampComplete.key
+        )
+            .setOrigin(0.5)
+            .setDisplaySize(152, 152)
+            .setAngle(-30)
+            .setDepth(1002)
+            .setVisible(false);
 
         this.popupContainer = this.add.container(0, 0).setDepth(1000);
         this.popupContainer.add([
@@ -495,12 +572,13 @@ export class ExecutionHouseScene extends Phaser.Scene {
             timerText,
             hpText,
             summaryText,
+            stampImage,
             cardTitle,
             cardBody,
             messageText
         ]);
 
-        this.popupNodes = [backdrop, leftPanel, rightPanel, rightPanelDivider, bottomBand, progressText, timerText, hpText, summaryText, cardTitle, cardBody, messageText];
+        this.popupNodes = [backdrop, leftPanel, rightPanel, rightPanelDivider, bottomBand, progressText, timerText, hpText, summaryText, stampImage, cardTitle, cardBody, messageText];
         this.popupProgressText = progressText;
         this.popupTimerText = timerText;
         this.popupHpText = hpText;
@@ -508,20 +586,27 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.popupCardTitle = cardTitle;
         this.popupCardBody = cardBody;
         this.popupStatusText = null;
-        this.popupStampText = null;
+        this.popupStampText = stampImage;
         this.popupMessageText = messageText;
         this.popupChecklistNote = null;
-
-        this.classificationCategoryButtons = [];
-        this.classificationActionButtons = {};
-        this.classificationChecklistRows = {};
-
-        this.add.text(layout.categoryColumnX, layout.sectionHeaderY, '1. 비세목 구분', {
+        this.popupCategoryHeader = this.add.text(layout.categoryColumnX, layout.sectionHeaderY, '1. 비세목 구분', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             fontStyle: 'bold',
             color: '#fff4c9'
         }).setOrigin(0.5, 0.5).setDepth(1002);
+        this.popupChecklistHeader = this.add.text(layout.checklistHeaderX, layout.sectionHeaderY, '2. 추가 업무', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            fontStyle: 'bold',
+            color: '#fff4c9'
+        }).setOrigin(0.5, 0.5).setDepth(1002);
+
+        this.classificationCategoryButtons = [];
+        this.classificationActionButtons = {};
+        this.classificationChecklistRows = {};
+        this.popupContainer.add([this.popupCategoryHeader, this.popupChecklistHeader]);
+        this.popupNodes.push(this.popupCategoryHeader, this.popupChecklistHeader);
         CATEGORY_ORDER.forEach((label, index) => {
             const button = this.createButton(this.popupContainer, layout.categoryColumnX, layout.categoryStartY + index * layout.categoryGapY, label, () => this.selectCategory(label), {
                 width: 205,
@@ -534,33 +619,22 @@ export class ExecutionHouseScene extends Phaser.Scene {
             this.classificationCategoryButtons.push({ label, ...button });
         });
 
-        this.add.text(layout.checklistHeaderX, layout.sectionHeaderY, '2. 추가 업무', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            fontStyle: 'bold',
-            color: '#fff4c9'
-        }).setOrigin(0.5, 0.5).setDepth(1002);
-        this.classificationChecklistRows.minutes = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY, '회의록 첨부', () => this.toggleEvidence('minutes'), {
+        this.classificationChecklistRows.minutes = this.createChecklistRow(this.popupContainer, layout.checklistColumnX - 3, layout.checklistStartY, '회의록 첨부', () => this.toggleEvidence('minutes'), {
             width: 222,
             depth: 1002
         });
-        this.classificationChecklistRows.participants = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY, '참여명단 첨부', () => this.toggleEvidence('participants'), {
+        this.classificationChecklistRows.participants = this.createChecklistRow(this.popupContainer, layout.checklistColumnX - 3, layout.checklistStartY + layout.checklistGapY, '참여명단 첨부', () => this.toggleEvidence('participants'), {
             width: 222,
             depth: 1002
         });
-        this.classificationChecklistRows.signature = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 2, '서명 증빙 첨부', () => this.toggleEvidence('signature'), {
+        this.classificationChecklistRows.signature = this.createChecklistRow(this.popupContainer, layout.checklistColumnX - 3, layout.checklistStartY + layout.checklistGapY * 2, '서명 증빙 첨부', () => this.toggleEvidence('signature'), {
             width: 222,
             depth: 1002
         });
-        this.classificationChecklistRows.asset = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 3, 'PIMS 자산등록', () => this.toggleEvidence('asset'), {
+        this.classificationChecklistRows.asset = this.createChecklistRow(this.popupContainer, layout.checklistColumnX - 3, layout.checklistStartY + layout.checklistGapY * 3, 'PIMS 자산등록', () => this.toggleEvidence('asset'), {
             width: 222,
             depth: 1002
         });
-        this.classificationChecklistRows.none = this.createChecklistRow(this.popupContainer, layout.checklistColumnX, layout.checklistStartY + layout.checklistGapY * 4, '추가 증빙 없음', () => this.toggleEvidence('none'), {
-            width: 222,
-            depth: 1002
-        });
-
         this.classificationActionButtons.complete = this.createButton(this.popupContainer, 490, layout.actionButtonsY, '분류 완료', () => this.completeCurrentReceipt(), {
             width: 231,
             height: 46,
@@ -579,30 +653,36 @@ export class ExecutionHouseScene extends Phaser.Scene {
         });
     }
 
-    refreshClassificationPopup() {
+    refreshClassificationPopup(options = {}) {
         if (!this.popupContainer || this.popupMode !== 'classification') {
             return;
         }
+        const preserveNotice = Boolean(options?.preserveNotice);
 
         const receipt = this.getCurrentReceipt();
+        const timerDays = Number.isFinite(this.timerDays)
+            ? this.timerDays
+            : (GameState.get('stage2TimerRemaining') ?? chapter2Data.timerDays);
+        const visibleReceiptTotal = this.bonusTriggered ? RECEIPT_TOTAL : INITIAL_RECEIPT_COUNT;
         this.updateClassificationPopupControls(receipt);
 
         if (!receipt) {
             this.popupCardTitle.setText('영수증 분류 완료');
             this.popupCardBody.setText('모든 영수증을 처리했습니다.');
             this.popupProgressText.setText(`처리 현황: ${this.processedCount}/${RECEIPT_TOTAL}`);
-            this.popupTimerText.setText(`D-${this.timerDays}`);
+            this.popupTimerText.setText(`D-${timerDays}`);
             this.popupHpText.setText(`HP: ${GameState.get('hp')} / 100`);
             this.popupSummaryText.setText(`정상 ${this.registeredCount}건 / 반려 ${this.rejectedCount}건 / 실수 ${this.mistakeCount || 0}회`);
             this.popupMessageText.setText('');
             return;
         }
 
-        const currentNumber = Math.min(this.processedCount + 1, RECEIPT_TOTAL);
-        this.popupProgressText.setText(`영수증 ${currentNumber} / ${RECEIPT_TOTAL}`);
-        this.popupTimerText.setText(`PIMS 등록기한 D-${this.timerDays}`);
+        const currentNumber = Math.min(this.processedCount + 1, visibleReceiptTotal);
+        this.popupProgressText.setText(`영수증 ${currentNumber} / ${visibleReceiptTotal}`);
+        this.popupTimerText.setText(`PIMS 등록기한 D-${timerDays}`);
         this.popupHpText.setText(`HP: ${GameState.get('hp')} / 100`);
         this.popupSummaryText.setText(`정상 ${this.registeredCount}건 / 반려 ${this.rejectedCount}건 / 실수 ${this.mistakeCount || 0}회`);
+        this.popupStampText?.setVisible?.(false);
         this.popupCardTitle.setText(receipt.title);
         this.popupCardBody.setText([
             `품목: ${receipt.itemName}`,
@@ -612,7 +692,9 @@ export class ExecutionHouseScene extends Phaser.Scene {
             `금액: ${receipt.amount}`
         ].join('\n'));
         this.popupMessageText.setY(CLASSIFICATION_LAYOUT.feedback.y + 1);
-        this.popupMessageText.setText('영수증 정보를 보고 비세목과 추가 업무를 판단하세요.');
+        if (!preserveNotice) {
+            this.popupMessageText.setText('영수증 정보를 보고 비세목과 추가 업무를 판단하세요.');
+        }
     }
 
     updateClassificationPopupControls(receipt) {
@@ -662,10 +744,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         const rows = this.classificationChecklistRows || {};
         const showAll = Boolean(receipt);
         if (showAll) {
-            rows.none?.setVisible?.(true);
-            rows.none?.setEnabled?.(selected !== '미선택');
-            rows.none?.setChecked?.(Boolean(receipt?.evidenceFlags.none));
-
             rows.minutes?.setVisible?.(true);
             rows.participants?.setVisible?.(true);
             rows.signature?.setVisible?.(true);
@@ -709,7 +787,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         }
 
         const requiredActions = this.getRequiredExtraActions(receipt);
-        if (!requiredActions.length || requiredActions.includes('none')) {
+        if (!requiredActions.length) {
             return '추가 증빙 없음';
         }
 
@@ -752,7 +830,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
                 : ['minutes'];
         }
 
-        return ['none'];
+        return [];
     }
 
     getSelectedExtraActions(receipt) {
@@ -772,9 +850,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         }
         if (receipt.assetRegistered) {
             selected.push('asset');
-        }
-        if (receipt.evidenceFlags?.none) {
-            selected.push('none');
         }
         return selected;
     }
@@ -803,7 +878,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
             receipt.evidenceFlags.participants = false;
             receipt.evidenceFlags.signature = false;
             receipt.assetRegistered = false;
-            receipt.evidenceFlags.none = false;
         }
         receipt.selectedCategory = category;
         this.refreshClassificationPopup();
@@ -815,23 +889,8 @@ export class ExecutionHouseScene extends Phaser.Scene {
             return;
         }
 
-        if (key === 'none') {
-            receipt.evidenceFlags.none = !receipt.evidenceFlags.none;
-            if (receipt.evidenceFlags.none) {
-                receipt.evidenceFlags.minutes = false;
-                receipt.evidenceFlags.participants = false;
-                receipt.evidenceFlags.signature = false;
-                receipt.assetRegistered = false;
-            }
-            this.refreshClassificationPopup();
-            return;
-        }
-
         if (key === 'asset') {
             receipt.assetRegistered = !receipt.assetRegistered;
-            if (receipt.assetRegistered) {
-                receipt.evidenceFlags.none = false;
-            }
             this.refreshClassificationPopup();
             return;
         }
@@ -841,9 +900,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         }
 
         receipt.evidenceFlags[key] = !receipt.evidenceFlags[key];
-        if (receipt.evidenceFlags[key]) {
-            receipt.evidenceFlags.none = false;
-        }
         this.refreshClassificationPopup();
     }
 
@@ -864,7 +920,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
         if (receipt.invalid) {
             if (receipt.selectedCategory !== '반려') {
-                this.applyWrongAnswer('사업 목적과 관련 없는 지출은 반려해야 합니다.', receipt);
+                this.applyWrongAnswer(receipt.note || '사업 목적과 관련 없는 지출은 반려해야 합니다.', receipt);
                 return;
             }
             this.markReceiptRejected(receipt, '반려 완료');
@@ -911,7 +967,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
         receipt.evidenceFlags.minutes = false;
         receipt.evidenceFlags.participants = false;
         receipt.evidenceFlags.signature = false;
-        receipt.evidenceFlags.none = false;
         receipt.assetRegistered = false;
         this.refreshClassificationPopup();
     }
@@ -920,12 +975,19 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.mistakeCount = (this.mistakeCount || 0) + 1;
         GameState.decreaseHp(HP_LOSS);
         this.showPopupNotice(message, 0xff6b7d);
+        const baseX = this.popupContainer?.x ?? 0;
+        this.tweens.killTweensOf(this.popupContainer);
         this.tweens.add({
             targets: this.popupContainer,
-            x: { from: this.popupContainer.x - 8, to: this.popupContainer.x + 8 },
-            duration: 60,
+            x: { from: baseX - 8, to: baseX + 8 },
+            duration: 55,
             yoyo: true,
-            repeat: 2
+            repeat: 3,
+            onComplete: () => {
+                if (this.popupContainer) {
+                    this.popupContainer.x = baseX;
+                }
+            }
         });
         this.refreshHud();
         if ((GameState.get('hp') ?? 0) <= 0) {
@@ -946,7 +1008,8 @@ export class ExecutionHouseScene extends Phaser.Scene {
         GameState.set('stage2CurrentReceiptLabel', receipt.title);
         GameState.set('stage2CurrentReceiptCategory', '반려');
         GameState.set('stage2PendingAssetRegistration', this.hasPendingAssetRegistration());
-        this.popupStampText.setText(stampText || '반려 완료');
+        this.popupStampText?.setTexture?.(ASSETS.ui.stampRejected.key);
+        this.popupStampText?.setVisible?.(true);
         this.popupMessageText.setText(chapter2Data.rejectLines[0].text);
         this.finishReceiptAndAdvance(receipt);
     }
@@ -961,7 +1024,8 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.pendingPimsReceipts.push(receipt);
         GameState.set('stage2PendingAssetRegistration', this.hasPendingAssetRegistration());
 
-        this.popupStampText.setText('분류 완료');
+        this.popupStampText?.setTexture?.(ASSETS.ui.stampComplete.key);
+        this.popupStampText?.setVisible?.(true);
         this.popupMessageText.setText(this.getSuccessMessageForReceipt(receipt));
 
         if (!this.bonusTriggered && this.processedCount >= 4 && this.bonusQueue.length > 0) {
@@ -983,17 +1047,30 @@ export class ExecutionHouseScene extends Phaser.Scene {
         return '분류가 완료되었습니다.';
     }
 
-    finishReceiptAndAdvance(receipt) {
+    finishReceiptAndAdvance(receipt, forceAdvance = false) {
+        if (!forceAdvance && this.bonusWaveActive) {
+            this.pendingBonusAdvanceReceipt = receipt;
+            return;
+        }
+
+        this.receiptQueue.shift();
         this.updateReceiptState();
-        this.time.delayedCall(380, () => {
-            receipt?.destroy?.();
-            this.receiptQueue.shift();
-            if (this.receiptQueue.length === 0) {
+
+        if (this.receiptQueue.length === 0) {
+            this.time.delayedCall(380, () => {
+                receipt?.destroy?.();
                 this.finishPopupAndResume();
                 this.enterPimsApproachPhase();
-                return;
-            }
-            this.refreshClassificationPopup();
+            });
+            return;
+        }
+
+        this.time.delayedCall(380, () => {
+            receipt?.destroy?.();
+            this.clearPopup();
+            this.popupMode = 'classification';
+            this.createClassificationPopup();
+            this.refreshClassificationPopup({ preserveNotice: false });
         });
     }
 
@@ -1013,11 +1090,187 @@ export class ExecutionHouseScene extends Phaser.Scene {
 
     triggerBonusWave() {
         this.bonusTriggered = true;
+        this.bonusWaveActive = true;
         if (this.bonusQueue.length) {
             this.receiptQueue.push(...this.bonusQueue);
             this.bonusQueue = [];
         }
-        this.showPopupNotice(chapter2Data.bonusWaveLines.map((line) => line.text).join('\n'), 0xffd36e);
+        this.pendingBonusAdvanceReceipt = this.pendingBonusAdvanceReceipt || this.getCurrentReceipt();
+        this.showBonusWaveActor();
+        this.animateBonusReceiptCountReveal();
+        this.time.delayedCall(420, () => this.showBonusWaveBubble(this.bonusWaveActor, chapter2Data.bonusWaveLines));
+    }
+
+    showBonusWaveActor() {
+        this.clearBonusWaveActor();
+        if (!hasTexture(this, ASSETS.characters.kcaAssistantIdle.key)) {
+            return;
+        }
+
+        const startX = GAME_WIDTH + 160;
+        const targetX = GAME_WIDTH - 160;
+        const targetY = 702;
+        const startY = targetY + 18;
+        const actor = this.add.image(startX, startY, ASSETS.characters.kcaAssistantIdle.key)
+            .setOrigin(0.5, 1)
+            .setDisplaySize(132, 182)
+            .setDepth(1004)
+            .setAlpha(0);
+
+        this.bonusWaveActor = actor;
+        this.tweens.add({
+            targets: actor,
+            x: targetX,
+            y: targetY,
+            alpha: 1,
+            duration: 760,
+            ease: 'Cubic.out'
+        });
+    }
+
+    showBonusWaveBubble(actor, lines) {
+        this.clearBonusWaveBubble();
+        const bubbleLines = Array.isArray(lines) ? lines : [];
+        if (!bubbleLines.length) {
+            this.finishBonusWave();
+            return;
+        }
+
+        const bubbleX = (actor?.x ?? (GAME_WIDTH - 160)) - 168;
+        const bubbleY = (actor?.y ?? 220) - 220;
+        const bubble = this.add.container(bubbleX, bubbleY).setDepth(1006);
+        const panel = this.add.rectangle(0, 0, 420, 70, 0x1a1030, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x9f71ff, 0.9);
+        const arrow = this.add.triangle(138, 58, 0, 0, 16, 0, 8, 14, 0x1a1030, 0.96)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0x9f71ff, 0.9);
+        const text = this.add.text(0, 0, bubbleLines[0].text, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '18px',
+            color: '#f8f3ff',
+            stroke: '#0b0715',
+            strokeThickness: 3,
+            align: 'left',
+            lineSpacing: 6,
+            wordWrap: false
+        }).setOrigin(0.5, 0.5);
+        const hitArea = this.add.rectangle(0, 0, 420, 70, 0x000000, 0.001)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
+
+        bubble.add([panel, arrow, text, hitArea]);
+        this.tweens.add({
+            targets: bubble,
+            alpha: { from: 0, to: 1 },
+            duration: 160
+        });
+        this.bonusWaveBubble = bubble;
+        this.bonusWaveBubbleLines = bubbleLines;
+        this.bonusWaveBubbleIndex = 0;
+        this.bonusWaveBubbleHitArea = hitArea;
+
+        hitArea.on('pointerdown', (pointer, localX, localY, event) => {
+            event?.stopPropagation?.();
+            this.advanceBonusWaveBubble(text, bubble);
+        });
+    }
+
+    animateBonusReceiptCountReveal() {
+        const label = this.popupProgressText;
+        if (!label) {
+            return;
+        }
+
+        const beforeText = `영수증 ${Math.min(this.processedCount, INITIAL_RECEIPT_COUNT)} / ${INITIAL_RECEIPT_COUNT}`;
+        const afterText = `영수증 ${this.processedCount} / ${RECEIPT_TOTAL}`;
+        const baseX = label.x;
+        label.setText(beforeText);
+        label.setScale(1);
+
+        this.tweens.killTweensOf(label);
+        this.tweens.add({
+            targets: label,
+            x: { from: baseX - 8, to: baseX + 8 },
+            duration: 40,
+            yoyo: true,
+            repeat: 5,
+            ease: 'Linear',
+            onComplete: () => {
+                label.setText(afterText);
+                label.setX(baseX);
+                label.setScale(1.08);
+                this.tweens.add({
+                    targets: label,
+                    scaleX: 1,
+                    scaleY: 1,
+                    duration: 140,
+                    ease: 'Back.out'
+                });
+            }
+        });
+    }
+
+    advanceBonusWaveBubble(text, bubble) {
+        if (!this.bonusWaveBubbleLines.length) {
+            return;
+        }
+
+        if (this.bonusWaveBubbleIndex < this.bonusWaveBubbleLines.length - 1) {
+            this.bonusWaveBubbleIndex += 1;
+            text.setText(this.bonusWaveBubbleLines[this.bonusWaveBubbleIndex].text);
+            return;
+        }
+
+        this.finishBonusWave(bubble);
+    }
+
+    finishBonusWave(bubble = this.bonusWaveBubble) {
+        const pendingReceipt = this.pendingBonusAdvanceReceipt;
+        this.pendingBonusAdvanceReceipt = null;
+        this.bonusWaveActive = false;
+
+        if (bubble) {
+            this.tweens.add({
+                targets: bubble,
+                x: bubble.x + 60,
+                alpha: 0,
+                duration: 180,
+                onComplete: () => bubble.destroy(true)
+            });
+        }
+        if (this.bonusWaveActor) {
+            const actor = this.bonusWaveActor;
+            this.tweens.add({
+                targets: actor,
+                x: GAME_WIDTH + 180,
+                duration: 360,
+                ease: 'Cubic.in',
+                onComplete: () => this.clearBonusWaveActor()
+            });
+        } else {
+            this.clearBonusWaveActor();
+        }
+        this.clearBonusWaveBubble();
+        if (pendingReceipt) {
+            this.finishReceiptAndAdvance(pendingReceipt, true);
+        }
+    }
+
+    clearBonusWaveActor() {
+        this.bonusWaveActor?.destroy?.();
+        this.bonusWaveActor = null;
+    }
+
+    clearBonusWaveBubble() {
+        this.bonusWaveBubbleHitArea?.destroy?.();
+        this.bonusWaveBubble?.destroy?.();
+        this.bonusWaveBubble = null;
+        this.bonusWaveBubbleLines = [];
+        this.bonusWaveBubbleIndex = 0;
+        this.bonusWaveBubbleHitArea = null;
+        this.bonusWaveDrops.forEach((drop) => drop?.destroy?.());
+        this.bonusWaveDrops = [];
     }
 
     updateReceiptState() {
@@ -1056,6 +1309,36 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.clearPopup();
         this.createRegistrationPopup();
         this.refreshRegistrationPopup();
+    }
+
+    autoCompletePimsRegistration() {
+        if (this.stageResolved) {
+            return;
+        }
+
+        this.stagePhase = 'registration';
+        GameState.set('stage2Phase', 'registration');
+        GameState.setTimeRunning(false);
+        this.clearActionPanel();
+        this.clearPopup();
+        this.pendingPimsReceipts.forEach((receipt) => {
+            if (receipt.rejected) {
+                return;
+            }
+            if (receipt.asset) {
+                receipt.assetRegistered = true;
+            }
+            receipt.registered = true;
+        });
+        this.assetRegistered = true;
+        this.registeredCount = this.pendingPimsReceipts.filter((receipt) => receipt.registered).length;
+        GameState.set('stage2PendingAssetRegistration', false);
+        GameState.set('stage2SortedCount', this.registeredCount);
+        GameState.set('executionRate', Math.min(100, Math.round((this.registeredCount / RECEIPT_TOTAL) * 100)));
+        this.refreshHud();
+        this.bottomHud.setInteractionVisible(false);
+        this.bottomHud.refresh();
+        this.dialogue.say(chapter2Data.registrationCompleteLines, () => this.completeStage2());
     }
 
     createRegistrationPopup() {
@@ -1139,11 +1422,14 @@ export class ExecutionHouseScene extends Phaser.Scene {
         const assetPending = this.pendingPimsReceipts.filter((receipt) => receipt.asset && !receipt.assetRegistered);
         const pendingItems = this.pendingPimsReceipts.filter((receipt) => receipt.classified && !receipt.rejected);
         const registeredItems = this.pendingPimsReceipts.filter((receipt) => receipt.registered);
+        const timerDays = Number.isFinite(this.timerDays)
+            ? this.timerDays
+            : (GameState.get('stage2TimerRemaining') ?? chapter2Data.timerDays);
 
         this.registrationInfoText.setText([
             `등록 대기 ${pendingItems.length}건 / 반려 ${this.rejectedCount}건`,
             `집행률 ${GameState.get('executionRate')}%`,
-            `D-${this.timerDays}`
+            `D-${timerDays}`
         ].join('\n'));
         this.registrationListText.setText(
             pendingItems.length
@@ -1272,6 +1558,8 @@ export class ExecutionHouseScene extends Phaser.Scene {
     }
 
     clearPopup() {
+        this.clearBonusWaveActor();
+        this.clearBonusWaveBubble();
         this.popupContainer?.destroy(true);
         this.popupContainer = null;
         this.popupNodes = [];
@@ -1368,24 +1656,7 @@ export class ExecutionHouseScene extends Phaser.Scene {
         this.timerLoop?.remove(false);
         this.clearActionPanel();
         this.clearPopup();
-        this.setHudVisible(false);
-
-        this.showEndingScreen({
-            title: '2단계 완료',
-            body: '영수증 분류와 PIMS 등록까지 모두 마쳤습니다.\n집행 처리를 완료했습니다.',
-            primaryLabel: '3단계 시작',
-            primaryAction: () => this.scene.start('MiddleFerrisWheelScene'),
-            secondaryLabel: '처음으로 돌아가기',
-            secondaryAction: () => {
-                GameState.reset();
-                this.scene.start('StartScene');
-            },
-            tertiaryLabel: '다시 하기',
-            tertiaryAction: () => {
-                GameState.reset();
-                this.scene.start('ExecutionHouseScene');
-            }
-        });
+        this.dialogue.say(chapter2Data.successLines, () => this.scene.start('MiddleFerrisWheelScene'));
     }
 
     setHudVisible(visible) {
@@ -1589,16 +1860,15 @@ export class ExecutionHouseScene extends Phaser.Scene {
         const width = options.width || 246;
         const depth = options.depth || 1002;
         const row = this.add.container(x, y).setDepth(depth);
-        const box = this.add.rectangle(9, 0, 20, 20, 0x11172a, 1)
-            .setStrokeStyle(2, 0x75f6ff, 0.9);
+        const box = this.add.rectangle(4, 0, 22, 22, 0x11172a, 0);
         const mark = this.add.text(9, 0, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
+            fontSize: '20px',
             color: '#fff5c7',
             stroke: '#000000',
             strokeThickness: 2
         }).setOrigin(0.5);
-        const text = this.add.text(26, 0, label, {
+        const text = this.add.text(33, 0, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
             color: '#f8f3ff'
@@ -1638,7 +1908,6 @@ export class ExecutionHouseScene extends Phaser.Scene {
             setChecked(nextChecked) {
                 const checked = Boolean(nextChecked);
                 mark.setText(checked ? '✓' : '');
-                box.setFillStyle(checked ? 0x75f6ff : 0x11172a, checked ? 0.92 : 1);
                 text.setColor(checked ? '#fff5c7' : '#f8f3ff');
                 return checked;
             },
