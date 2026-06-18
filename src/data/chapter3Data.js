@@ -6,10 +6,10 @@ export const chapter3Data = {
     timerDays: 15,
     timerTickMs: 5000,
     walkableArea: { x: 48, y: 146, width: GAME_WIDTH - 96, height: 398 },
-    playerStart: { x: 176, y: 476 },
-    assistant: { x: 260, y: 428, width: 92, height: 118 },
-    reportTent: { x: 560, y: 436, width: 160, height: 180 },
-    submitBin: { x: 1064, y: 420, width: 180, height: 232 },
+    playerStart: { x: 176, y: 480 },
+    assistant: { x: 260, y: 460, width: 98, height: 135 },
+    reportTent: { x: 680, y: 442, width: 350, height: 150 },
+    submitBin: { x: 1024, y: 442, width: 126, height: 150 },
     briefingLines: [
         { speaker: 'KCA 간사', text: '김대리님, 중간보고서는 상반기 성과실적과 상반기 집행실적을 함께 봐야 합니다.' },
         { speaker: 'KCA 간사', text: '여기에 제출 공문까지 포함해서 보고서를 만든 뒤, PIMS에 기한 내로 제출해야 합니다.' },
@@ -33,7 +33,7 @@ export const chapter3Data = {
     ],
     failMessage: '중간보고서 제출 기한을 넘겼습니다.',
     reportTentPrompt: 'Space: 보고서 작성천막 조사',
-    submitPrompt: 'Space: PIMS 전송함 제출',
+    submitPrompt: 'Space: PIMS 단말기 제출',
     assistantHint: 'Space: KCA 간사와 대화',
     reportCards: [
         {

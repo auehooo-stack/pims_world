@@ -7,7 +7,7 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
-import { ASSETS, playBgmWithFade } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const REPORT_REQUIRED_IDS = ['performance', 'execution', 'official_letter'];
@@ -88,7 +88,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
             }, () => this.handleInteraction('reportTent')),
             new InteractableObject(this, {
                 id: 'submitBin',
-                name: 'PIMS 전송함',
+                name: 'PIMS 단말기',
                 prompt: chapter3Data.submitPrompt,
                 ...chapter3Data.submitBin,
                 color: 0x8bd6ff
@@ -127,6 +127,14 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
     }
 
     drawBackground() {
+        if (hasTexture(this, ASSETS.backgrounds.middleFerrisWheel.key)) {
+            this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSETS.backgrounds.middleFerrisWheel.key)
+                .setOrigin(0.5)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(0);
+            return;
+        }
+
         const g = this.add.graphics().setDepth(0);
         g.fillStyle(0x050814, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         g.fillStyle(0x11183a, 1).fillRect(0, 0, GAME_WIDTH, 188);
@@ -305,12 +313,11 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
             return;
         }
 
-        this.workshopTarget = {
-            x: chapter3Data.reportTent.x - 24,
-            y: chapter3Data.reportTent.y + 78
-        };
-        this.clickTarget = { ...this.workshopTarget };
-        this.pendingWorkshopPrompt = true;
+        this.clickTarget = null;
+        this.pendingWorkshopPrompt = false;
+        this.workshopTarget = null;
+        this.player.setMovement(0, 0);
+        this.openWritingScreen();
     }
 
     openWorkshopPrompt() {

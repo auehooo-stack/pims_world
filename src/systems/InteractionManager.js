@@ -24,7 +24,11 @@ export class InteractionManager {
             if (item?.available === false) {
                 return;
             }
-            const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, item.x, item.y);
+            const halfWidth = (item?.config?.width ?? 0) / 2;
+            const halfHeight = (item?.config?.height ?? 0) / 2;
+            const dx = Math.max(Math.abs(this.player.x - item.x) - halfWidth, 0);
+            const dy = Math.max(Math.abs(this.player.y - item.y) - halfHeight, 0);
+            const distance = Math.hypot(dx, dy);
             if (distance < this.range && distance < closestDistance) {
                 closest = item;
                 closestDistance = distance;

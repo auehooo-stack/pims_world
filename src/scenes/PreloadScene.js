@@ -2,7 +2,7 @@
 import { loadAssets } from '../systems/AssetManager.js';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
-const DEV_START_SCENE = 'ExecutionHouseScene';
+const DEV_START_SCENE = 'MiddleFerrisWheelScene';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
