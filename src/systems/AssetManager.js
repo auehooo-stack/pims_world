@@ -32,8 +32,10 @@ export const ASSETS = {
         sealedVaultOpen: image('bg_sealed_vault_open', '/assets/backgrounds/sealed_vault_open.png'),
         executionHouse: image('bg_execution_house', '/assets/backgrounds/execution_house_bg.png'),
         executionHouseClassification: image('bg_execution_house_classification', '/assets/backgrounds/execution_house_classification_bg.png'),
+        inspectionGate: image('bg_inspection_gate', '/assets/backgrounds/inspection_gate_bg.png'),
         middleFerrisWheel: image('bg_middle_ferris_wheel', '/assets/backgrounds/middle_ferris_wheel_bg.png'),
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
+        middleFerrisWheelReport: image('bg_middle_ferris_wheel_report', '/assets/backgrounds/middle_ferris_wheel_report_bg.png'),
         documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
         stageClearClosed: image('bg_stage_clear_closed', '/assets/backgrounds/StageClearSceneClosed.png'),
@@ -49,7 +51,8 @@ export const ASSETS = {
         kimDaeriClosed: image('char_kim_daeri_closed', '/assets/characters/kim_daeri_closed.png'),
         kcaAssistantIdle: image('char_kca_assistant_idle', '/assets/characters/kca_assistant_idle.png'),
         kcaAssistantClosed: image('char_kca_assistant_closed', '/assets/characters/kca_assistant_closed.png'),
-        kcaAssistantWalk: image('char_kca_assistant_walk', '/assets/characters/kca_assistant_walk.png')
+        kcaAssistantWalk: image('char_kca_assistant_walk', '/assets/characters/kca_assistant_walk.png'),
+        kcaTeamLeaderIdle: image('char_kca_team_leader_idle', '/assets/characters/kca_team_leader_idle.png')
     },
     objects: {
         cabinet: image('obj_cabinet', '/assets/objects/cabinet.png'),
@@ -65,6 +68,7 @@ export const ASSETS = {
         dialogPortraitKcaAssistant: image('ui_dialog_portrait_kca_assistant', '/assets/ui/dialog/characters/kca_assistant.png'),
         dialogPortraitKimDaeri: image('ui_dialog_portrait_kim_daeri', '/assets/ui/dialog/characters/kim_daeri.png'),
         dialogPortraitPimsWorld: image('ui_dialog_portrait_pims_world', '/assets/ui/dialog/characters/pims_world.png'),
+        dialogPortraitKcaTeamLeader: image('ui_dialog_portrait_kca_team_leader', '/assets/ui/dialog/characters/kca_team_leader.png'),
         hudPanel: image('ui_hud_panel', '/assets/ui/hud_panel.png'),
         objectiveBar: image('ui_objective_bar', '/assets/ui/objective_bar.png'),
         interactionPanel: image('ui_interaction_panel', '/assets/ui/bottom/interaction_panel.png'),

@@ -52,6 +52,14 @@ export const initialGameState = {
     stage3RejectionCount: 0,
     stage3Cleared: false,
     stage3Failed: false,
+    stage4BriefingDone: false,
+    stage4QuizActive: false,
+    stage4QuestionIndex: 0,
+    stage4QuestionTotal: 6,
+    stage4CorrectCount: 0,
+    stage4WrongCount: 0,
+    stage4Cleared: false,
+    stage4Failed: false,
     savedPlayerPosition: null
 };
 
@@ -97,6 +105,19 @@ export const GameState = {
                 return '필수 자료를 다시 골라 보고서를 완성하세요.';
             }
             return 'PIMS 전송함에 보고서를 제출하세요.';
+        }
+
+        if (this.get('currentChapter') === 4) {
+            if (this.get('stage4Cleared')) {
+                return '실태점검 컨설팅을 마쳤습니다.';
+            }
+            if (this.get('stage4Failed')) {
+                return '실태점검 대응을 다시 정리하세요.';
+            }
+            if (!this.get('stage4BriefingDone')) {
+                return '점검 데스크에서 실태점검 안내를 확인하세요.';
+            }
+            return '점검 질문에 가장 적절한 답변을 선택하세요.';
         }
 
         if (this.get('currentChapter') === 2) {

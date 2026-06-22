@@ -223,6 +223,20 @@ export class TopHUD {
         if (GameState.get('currentChapter') === 1) {
             return '미교부';
         }
+        if (GameState.get('currentChapter') === 4) {
+            if (GameState.get('stage4Cleared')) {
+                return '완료';
+            }
+            if (GameState.get('stage4Failed')) {
+                return '실패';
+            }
+            if (!GameState.get('stage4QuizActive')) {
+                return '대기';
+            }
+            const current = Number(GameState.get('stage4QuestionIndex') || 0) + 1;
+            const total = Number(GameState.get('stage4QuestionTotal') || 6);
+            return `질문 ${Math.min(current, total)} / ${total}`;
+        }
         return `${GameState.get('executionRate')}%`;
     }
 
@@ -254,7 +268,10 @@ export class TopHUD {
     refresh() {
         const chapter = GameState.get('currentChapter');
         this.stageBox.text?.setText(
-            chapter === 3 ? '3단계: 중간 관람차' : chapter === 2 ? '2단계: 집행의 집' : '1단계: 봉인된 금고'
+            chapter === 4 ? '4단계: 실태점검의 관문'
+                : chapter === 3 ? '3단계: 중간 관람차'
+                : chapter === 2 ? '2단계: 집행의 집'
+                : '1단계: 봉인된 금고'
         );
         this.dateMetric?.valueText?.setText(GameState.formatCurrentDate());
         this.updateHeartDisplay();

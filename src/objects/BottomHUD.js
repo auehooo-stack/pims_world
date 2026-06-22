@@ -230,8 +230,7 @@ export class BottomHUD {
 
     refreshInventory() {
         let items = [
-            { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 },
-            { id: 'ndaDocument', label: '보안서약서', color: 0xffd36e, count: GameState.get('currentNdaCount') }
+            { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 }
         ];
 
         if (GameState.get('currentChapter') === 2) {

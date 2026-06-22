@@ -14,7 +14,7 @@ export class InteractableObject {
         this.isVault = this.id === 'vault';
         this.isAssistant = this.id === 'assistant';
         this.animated = Boolean(config.animated);
-        this.textureKey = getInteractableTextureKey(this.id);
+        this.textureKey = config.textureKey || getInteractableTextureKey(this.id);
         this.assistantOpenTextureKey = this.isAssistant ? ASSETS.characters.kcaAssistantIdle.key : null;
         this.assistantClosedTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantClosed.key : null;
         this.hideVisuals = Boolean(config.hideVisuals);
@@ -39,11 +39,12 @@ export class InteractableObject {
             .setStrokeStyle(this.isVault ? 0 : 2, this.isVault ? 0xf0dd9c : 0xffffff, this.isVault ? 0 : 0.35);
         const labelOffset = this.isVault ? 20 : 10;
         const labelY = config.height / 2 + labelOffset;
+        const labelBackgroundColor = config.labelBackgroundColor ?? 'rgba(18, 12, 34, 0.45)';
         this.label = scene.add.text(0, labelY, config.name, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff',
-            backgroundColor: 'rgba(18, 12, 34, 0.45)'
+            backgroundColor: labelBackgroundColor
         }).setOrigin(0.5);
         if (this.isVault) {
             this.vaultGlow = scene.add.graphics();

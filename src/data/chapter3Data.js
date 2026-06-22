@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameDimensions.js';
+﻿import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameDimensions.js';
 
 export const chapter3Data = {
     title: '3단계: 중간 관람차',
@@ -26,7 +26,7 @@ export const chapter3Data = {
         { speaker: 'KCA 간사', text: '좋습니다. 성과실적, 집행실적, 공문까지 다 갖췄네요. 이제 PIMS로 제출하시죠.' }
     ],
     incompleteLines: [
-        { speaker: 'KCA 간사', text: '흠… 보고서 형태는 갖췄는데, 뭔가 하나 빠진 느낌이네요. 일단 제출은 해보시죠.' }
+        { speaker: 'KCA 간사', text: '흠… 보고서 형태는 갖췄는데, 뭔가 하나 빠진 느낌이네요.\n일단 제출은 해보시죠.' }
     ],
     rejectLines: [
         { speaker: 'KCA 간사', text: '필수자료가 아닌 게 섞여 있네요. 제출 전에 한 번 더 확인하는 게 좋겠습니다.' }
@@ -37,67 +37,58 @@ export const chapter3Data = {
     assistantHint: 'Space: KCA 간사와 대화',
     reportCards: [
         {
-            id: 'performance',
-            label: '상반기 성과실적',
-            description: '1월부터 6월까지 달성한 성과를 정리한 자료입니다.',
-            required: true,
-            feedback: ''
-        },
-        {
-            id: 'execution',
-            label: '상반기 집행실적',
-            description: '상반기 사업비 집행 내역을 정리한 자료입니다.',
-            required: true,
-            feedback: ''
+            id: 'promo_mockup',
+            label: '회의 사진',
+            required: false,
+            feedback: '회의 사진만으로는 중간보고서가 완성되지 않습니다.'
         },
         {
             id: 'official_letter',
-            label: '제출 공문',
-            description: '중간보고서를 공식적으로 제출하는 공문입니다.',
+            label: '제출공문(수신처:주무부서+KCA)',
             required: true,
             feedback: ''
         },
         {
+            id: 'settlement',
+            label: '간식 영수증',
+            required: false,
+            feedback: '간식 영수증만으로는 중간보고서가 완성되지 않습니다.'
+        },
+        {
             id: 'plan_h2',
-            label: '하반기 추진계획',
-            description: '중간보고의 핵심은 상반기 실적 확인이며, 하반기 계획은 필수 제출자료가 아닙니다.',
+            label: '예산 집행 계획',
             required: false,
             feedback: '계획자료가 아니라 상반기 실적자료가 필요합니다.'
         },
         {
             id: 'last_year',
-            label: '전년도 성과자료',
-            description: '보고 대상 기간이 다릅니다.',
+            label: '행사 안내문',
             required: false,
-            feedback: '보고 대상 기간이 다릅니다. 이번 중간보고에는 올해 상반기 실적이 필요합니다.'
+            feedback: '보고 대상 기간이 다릅니다.'
+        },
+        {
+            id: 'performance',
+            label: '상반기 사업 성과',
+            required: true,
+            feedback: ''
         },
         {
             id: 'memo',
             label: '개인 메모',
-            description: '공식 제출자료가 아닙니다.',
             required: false,
-            feedback: '개인 메모는 공식 제출자료로 인정되지 않습니다.'
+            feedback: '개인 메모는 공식 제출자료가 아닙니다.'
+        },
+        {
+            id: 'execution',
+            label: '사업비 집행실적',
+            required: true,
+            feedback: ''
         },
         {
             id: 'change_request',
-            label: '협약변경 요청서',
-            description: '협약변경 단계에서 사용하는 자료입니다.',
+            label: '제출공문(수신처: 주무부서)',
             required: false,
-            feedback: '협약변경 요청서는 변경 단계에서 사용하는 자료입니다.'
-        },
-        {
-            id: 'settlement',
-            label: '정산보고서',
-            description: '정산 단계에서 제출하는 자료입니다.',
-            required: false,
-            feedback: '정산보고서는 최종 정산 단계에서 제출하는 자료입니다.'
-        },
-        {
-            id: 'promo_mockup',
-            label: '홍보물 시안',
-            description: '성과 증빙으로 활용될 수는 있지만, 중간보고서 제출 패키지의 핵심 필수자료는 아닙니다.',
-            required: false,
-            feedback: '홍보물 시안만으로는 중간보고서가 완성되지 않습니다.'
+            feedback: '제출공문은 수신처에 따라 구분합니다.'
         }
     ]
 };

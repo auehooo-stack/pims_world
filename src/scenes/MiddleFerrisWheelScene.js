@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { chapter3Data } from '../data/chapter3Data.js';
 import { GameState } from '../systems/GameState.js';
 import { DialogueManager } from '../systems/DialogueManager.js';
@@ -70,7 +70,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
 
-        this.interactables = [
+                this.interactables = [
             new InteractableObject(this, {
                 id: 'assistant',
                 name: 'KCA 간사',
@@ -84,14 +84,16 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
                 name: '보고서 작성천막',
                 prompt: chapter3Data.reportTentPrompt,
                 ...chapter3Data.reportTent,
-                color: 0x7ce0c7
+                labelOnly: true,
+                hideVisuals: true
             }, () => this.handleInteraction('reportTent')),
             new InteractableObject(this, {
                 id: 'submitBin',
                 name: 'PIMS 단말기',
                 prompt: chapter3Data.submitPrompt,
                 ...chapter3Data.submitBin,
-                color: 0x8bd6ff
+                labelOnly: true,
+                hideVisuals: true
             }, () => this.handleInteraction('submitBin'))
         ];
 
@@ -212,7 +214,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         if (!this.deadlineText || !this.deadlineText.active) {
             this.deadlineText = this.add.text(GAME_WIDTH - 74, 78, '', {
                 fontFamily: 'Arial Black, Arial, sans-serif',
-                fontSize: '18px',
+                fontSize: '14px',
                 color: '#fff0c4',
                 stroke: '#000000',
                 strokeThickness: 4
@@ -455,46 +457,44 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         this.writingOverlay?.destroy(true);
         this.writingOverlay = this.add.container(0, 0).setDepth(990);
 
-        const dim = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.78);
-        const title = this.add.text(CENTER_X, 68, chapter3Data.subtitle, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '38px',
-            color: '#fff5c7',
-            stroke: '#34145c',
-            strokeThickness: 5
-        }).setOrigin(0.5);
-        const hint = this.add.text(CENTER_X, 122, '중간보고서 작성에 필요한 자료를 선택하세요.', {
+        const background = hasTexture(this, ASSETS.backgrounds.middleFerrisWheelReport.key)
+            ? this.add.image(CENTER_X, GAME_HEIGHT / 2, ASSETS.backgrounds.middleFerrisWheelReport.key)
+                .setOrigin(0.5)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+            : this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x070916, 1);
+        const hint = this.add.text(CENTER_X, 162, '중간보고서 작성에 필요한 자료를 선택하세요.', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '20px',
+            fontSize: '17px',
             color: '#c9ffef'
         }).setOrigin(0.5);
 
         const slots = [];
-        const slotStartX = 300;
-        const slotY = 548;
-        const slotWidth = 210;
-        const slotHeight = 54;
+        const slotX = 865;
+        const slotStartY = 282;
+        const slotWidth = 225;
+        const slotHeight = 85;
+        const slotGapY = 118;
         for (let i = 0; i < 3; i += 1) {
-            const x = slotStartX + i * 236;
-            const slot = this.add.rectangle(x, slotY, slotWidth, slotHeight, 0x101425, 0.9)
-                .setStrokeStyle(2, 0x75f6ff, 0.5);
-            const text = this.add.text(x, slotY, this.selectedCardIds[i] ? this.getCardById(this.selectedCardIds[i])?.label || '' : '비어 있음', {
+            const y = slotStartY + i * slotGapY;
+            const slot = this.add.rectangle(slotX, y, slotWidth, slotHeight, 0x101425, 0)
+                .setStrokeStyle(0, 0x000000, 0);
+            const text = this.add.text(slotX, y, this.selectedCardIds[i] ? this.getCardById(this.selectedCardIds[i])?.label || '' : '비어 있음', {
                 fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '16px',
+                fontSize: '14px',
                 color: '#f8f3ff',
                 align: 'center',
-                wordWrap: { width: 184 }
+                wordWrap: { width: 268 }
             }).setOrigin(0.5);
             slots.push(slot, text);
         }
 
         const cards = [];
-        const cardWidth = 220;
-        const cardHeight = 74;
-        const startX = 226;
-        const startY = 178;
-        const gapX = 18;
-        const gapY = 16;
+        const cardWidth = 120;
+        const cardHeight = 120;
+        const startX = 336;
+        const startY = 250;
+        const gapX = 24;
+        const gapY = 15;
 
         chapter3Data.reportCards.forEach((card, index) => {
             const col = index % 3;
@@ -502,37 +502,80 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
             const x = startX + col * (cardWidth + gapX);
             const y = startY + row * (cardHeight + gapY);
             const selected = this.selectedCardIds.includes(card.id);
-            const box = this.add.rectangle(x, y, cardWidth, cardHeight, selected ? CARD_COLORS.selected : CARD_COLORS.base, 0.98)
-                .setStrokeStyle(2, card.required ? CARD_COLORS.required : CARD_COLORS.optional, selected ? 0.9 : 0.45)
+            const box = this.add.rectangle(x, y, cardWidth, cardHeight, selected ? 0x0f1220 : 0x000000, selected ? 0.32 : 0)
+                .setStrokeStyle(0, 0x000000, 0)
                 .setInteractive({ useHandCursor: true });
-            const label = this.add.text(x - cardWidth / 2 + 16, y - 18, card.label, {
+            const hover = this.add.rectangle(x, y, cardWidth, cardHeight, selected ? 0x1b2140 : 0x75f6ff, 0)
+                .setStrokeStyle(0, 0x000000, 0);
+            const checkMark = this.add.text(x + cardWidth / 2 - 12, y - cardHeight / 2 + 10, selected ? '✓' : '', {
                 fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '16px',
+                fontSize: '18px',
                 color: '#f8f3ff'
-            });
-            const desc = this.add.text(x - cardWidth / 2 + 16, y + 2, card.description, {
-                fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '12px',
-                color: '#c9ffef',
-                wordWrap: { width: cardWidth - 32 },
-                lineSpacing: 2
-            });
+            }).setOrigin(0.5);
             box.on('pointerdown', (_pointer, _localX, _localY, event) => {
                 event?.stopPropagation?.();
                 this.toggleCardSelection(card.id);
             });
-            cards.push(box, label, desc);
+            box.on('pointerover', () => {
+                hover.setAlpha(selected ? 0.22 : 0.14);
+            });
+            box.on('pointerout', () => {
+                hover.setAlpha(0);
+            });
+            cards.push(box, hover, checkMark);
         });
 
-        const info = this.add.text(CENTER_X, 476, message || '필수 자료 3개를 모두 선택해야 보고서를 완성할 수 있습니다.', {
+        const assistantPortraitX = 1118;
+        const assistantPortraitY = 600;
+        const assistantPortraitWidth = 132;
+        const assistantPortraitHeight = 182;
+        const assistantPortrait = hasTexture(this, ASSETS.characters.kcaAssistantIdle.key)
+            ? this.add.image(assistantPortraitX, assistantPortraitY, ASSETS.characters.kcaAssistantIdle.key)
+                .setDisplaySize(assistantPortraitWidth, assistantPortraitHeight)
+                .setFlipX(true)
+            : this.add.rectangle(assistantPortraitX, assistantPortraitY, assistantPortraitWidth, assistantPortraitHeight, 0xff4f86, 0.22)
+                .setStrokeStyle(2, 0xff4f86, 0.65);
+        const assistantLabel = this.add.text(assistantPortraitX, assistantPortraitY - assistantPortraitHeight / 2 - 12, 'KCA 간사', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: message ? '#ff8fb0' : '#fff5c7',
-            align: 'center',
-            wordWrap: { width: 900 }
+            fontSize: '14px',
+            color: '#ffd36e',
+            backgroundColor: 'rgba(18, 12, 34, 0.72)',
+            padding: { left: 8, right: 8, top: 3, bottom: 3 }
         }).setOrigin(0.5);
 
-        const createBtn = this.add.text(448, 620, '보고서 만들기', {
+        const feedbackBubble = message ? (() => {
+            const bubbleX = assistantPortraitX - 88;
+            const bubbleY = assistantPortraitY - 176;
+            const bubble = this.add.container(bubbleX, bubbleY).setDepth(1000);
+            const panel = this.add.rectangle(0, 0, 420, 96, 0x1a1030, 0.96)
+                .setOrigin(0.5)
+                .setStrokeStyle(2, 0x9f71ff, 0.9);
+            const arrow = this.add.triangle(142, 71, 0, 0, 16, 0, 8, 14, 0x1a1030, 0.96)
+                .setOrigin(0.5)
+                .setStrokeStyle(2, 0x9f71ff, 0.9);
+            const wrappedMessage = String(message || '').replace(/(?<=[.!?。！？])\s+/g, '\n');
+            const text = this.add.text(0, 0, wrappedMessage, {
+                fontFamily: 'GALMURI, Arial, sans-serif',
+                fontSize: '18px',
+                color: '#f8f3ff',
+                stroke: '#0b0715',
+                strokeThickness: 3,
+                align: 'left',
+                lineSpacing: 6,
+                wordWrap: false
+            }).setOrigin(0.5);
+            const hitArea = this.add.rectangle(0, 0, 420, 96, 0x000000, 0.001)
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true });
+            hitArea.on('pointerdown', (pointer, localX, localY, event) => {
+                event?.stopPropagation?.();
+                bubble.destroy(true);
+            });
+            bubble.add([panel, arrow, text, hitArea]);
+            return bubble;
+        })() : null;
+
+        const createBtn = this.add.text(485, 645, '보고서 만들기', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
             color: '#ffffff',
@@ -541,7 +584,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         createBtn.on('pointerdown', () => this.createReport());
 
-        const resetBtn = this.add.text(640, 620, '다시 선택', {
+        const resetBtn = this.add.text(800, 645, '다시 선택', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
             color: '#ffffff',
@@ -550,20 +593,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         resetBtn.on('pointerdown', () => this.resetSelection());
 
-        const closeBtn = this.add.text(832, 620, '닫기', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#24183f',
-            padding: { left: 20, right: 20, top: 10, bottom: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        closeBtn.on('pointerdown', () => {
-            this.clearWritingOverlay();
-            this.mode = 'field';
-        });
-
-        this.writingOverlay.add([dim, title, hint, ...cards, ...slots, info, createBtn, resetBtn, closeBtn]);
-        this.writingInfoText = info;
+        this.writingOverlay.add([background, hint, ...cards, ...slots, assistantPortrait, assistantLabel, feedbackBubble, createBtn, resetBtn].filter(Boolean));
     }
 
     clearWritingOverlay() {
@@ -604,7 +634,7 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         GameState.set('stage3SubmitEnabled', false);
         GameState.set('stage3MissingItems', []);
         this.bottomHud?.refresh?.();
-        this.renderWritingScreen('다시 선택하세요.');
+        this.renderWritingScreen();
     }
 
     createReport() {
@@ -690,20 +720,22 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         GameState.set('timeRunning', false);
         GameState.set('stage3Phase', 'complete');
         this.timerLoop?.remove(false);
+        this.clearWritingOverlay();
+        this.clearWorkshopOverlay();
+        this.bottomHud?.setInteractionVisible?.(false);
 
-        this.showEndingScreen({
-            title: '3단계 완료',
-            body: '중간보고서가 PIMS에 제출되었습니다.\n다음 업데이트를 기다려 주세요.',
-            primaryLabel: '처음으로 돌아가기',
-            primaryAction: () => {
-                GameState.reset();
-                this.scene.start('StartScene');
-            },
-            secondaryLabel: '다시 하기',
-            secondaryAction: () => {
-                GameState.reset();
-                this.scene.start('MiddleFerrisWheelScene');
-            }
+        GameState.set('currentChapter', 4);
+        GameState.set('stage4BriefingDone', false);
+        GameState.set('stage4QuizActive', false);
+        GameState.set('stage4QuestionIndex', 0);
+        GameState.set('stage4QuestionTotal', 6);
+        GameState.set('stage4CorrectCount', 0);
+        GameState.set('stage4WrongCount', 0);
+        GameState.set('stage4Cleared', false);
+        GameState.set('stage4Failed', false);
+
+        this.time.delayedCall(120, () => {
+            this.scene.start('InspectionGateScene');
         });
     }
 
@@ -820,3 +852,10 @@ export class MiddleFerrisWheelScene extends Phaser.Scene {
         text.setInteractive({ useHandCursor: true }).on('pointerdown', select);
     }
 }
+
+
+
+
+
+
+
