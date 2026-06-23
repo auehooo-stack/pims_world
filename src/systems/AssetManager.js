@@ -33,6 +33,7 @@ export const ASSETS = {
         executionHouse: image('bg_execution_house', '/assets/backgrounds/execution_house_bg.png'),
         executionHouseClassification: image('bg_execution_house_classification', '/assets/backgrounds/execution_house_classification_bg.png'),
         inspectionGate: image('bg_inspection_gate', '/assets/backgrounds/inspection_gate_bg.png'),
+        inspectionGateQuiz: image('bg_inspection_gate_quiz', '/assets/backgrounds/inspection_gate_quiz_bg.png'),
         middleFerrisWheel: image('bg_middle_ferris_wheel', '/assets/backgrounds/middle_ferris_wheel_bg.png'),
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
         middleFerrisWheelReport: image('bg_middle_ferris_wheel_report', '/assets/backgrounds/middle_ferris_wheel_report_bg.png'),

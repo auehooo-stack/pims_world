@@ -17,9 +17,9 @@ const QUIZ_LAYOUT = {
     feedback: { x: CENTER_X, y: 618, width: 1140, height: 52 },
     answerButtons: [
         { x: 74, y: 410, width: 228, height: 56 },
-        { x: 324, y: 410, width: 228, height: 56 },
-        { x: 74, y: 475, width: 228, height: 56 },
-        { x: 324, y: 475, width: 228, height: 56 }
+        { x: 384, y: 410, width: 228, height: 56 },
+        { x: 74, y: 490, width: 228, height: 56 },
+        { x: 384, y: 490, width: 228, height: 56 }
     ]
 };
 
@@ -37,10 +37,8 @@ export class InspectionGateScene extends Phaser.Scene {
         this.transitionLocked = false;
         this.answerButtons = [];
         this.feedbackText = null;
-        this.questionTitleText = null;
         this.questionText = null;
         this.statusText = null;
-        this.speakerText = null;
         this.questionPortrait = null;
         this.questionPortraitLabel = null;
         this.roomHintText = null;
@@ -291,38 +289,28 @@ export class InspectionGateScene extends Phaser.Scene {
         this.clearQuizNodes();
         this.quizOverlay = this.add.container(0, 0).setDepth(980);
 
-        const shade = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.42)
+        const background = hasTexture(this, ASSETS.backgrounds.inspectionGateQuiz.key)
+            ? this.add.image(CENTER_X, GAME_HEIGHT / 2, ASSETS.backgrounds.inspectionGateQuiz.key)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setOrigin(0.5)
+                .setDepth(979)
+            : null;
+        const shade = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.18)
             .setOrigin(0.5)
             .setDepth(980);
-        const subtitle = this.add.text(CENTER_X, 88, chapter4Data.subtitle, {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#c9ffef'
-        }).setOrigin(0.5).setDepth(981);
         const leftPanel = this.add.rectangle(QUIZ_LAYOUT.leftPanel.x, QUIZ_LAYOUT.leftPanel.y, QUIZ_LAYOUT.leftPanel.width, QUIZ_LAYOUT.leftPanel.height, 0x11172a, 0)
             .setOrigin(0, 0)
             .setStrokeStyle(0, 0x000000, 0);
         const rightPanel = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x, QUIZ_LAYOUT.rightPanel.y, QUIZ_LAYOUT.rightPanel.width, QUIZ_LAYOUT.rightPanel.height, 0x11172a, 0)
             .setOrigin(0, 0)
             .setStrokeStyle(0, 0x000000, 0);
-        const leftLabel = this.add.text(QUIZ_LAYOUT.leftPanel.x + 20, QUIZ_LAYOUT.leftPanel.y + 14, '점검 질문', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '17px',
-            color: '#fff5c7'
-        });
-        const rightLabel = this.add.text(QUIZ_LAYOUT.rightPanel.x + 20, QUIZ_LAYOUT.rightPanel.y + 14, '현재 사업 현황', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '17px',
-            color: '#c9ffef'
-        });
-
         const portrait = hasTexture(this, ASSETS.characters.kcaTeamLeaderIdle.key)
-            ? this.add.image(QUIZ_LAYOUT.leftPanel.x + 86, QUIZ_LAYOUT.leftPanel.y + 182, ASSETS.characters.kcaTeamLeaderIdle.key)
+            ? this.add.image(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 132, ASSETS.characters.kcaTeamLeaderIdle.key)
                 .setDisplaySize(116, 160)
                 .setFlipX(true)
-            : this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 86, QUIZ_LAYOUT.leftPanel.y + 182, 116, 160, 0xff4f86, 0.18)
+            : this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 132, 116, 160, 0xff4f86, 0.18)
                 .setStrokeStyle(2, 0xff4f86, 0.6);
-        const portraitLabel = this.add.text(QUIZ_LAYOUT.leftPanel.x + 86, QUIZ_LAYOUT.leftPanel.y + 96, 'KCA 팀장님', {
+        const portraitLabel = this.add.text(QUIZ_LAYOUT.leftPanel.x + 136, QUIZ_LAYOUT.leftPanel.y + 96, 'KCA 팀장님', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '14px',
             color: '#ffd36e',
@@ -330,32 +318,21 @@ export class InspectionGateScene extends Phaser.Scene {
             padding: { left: 8, right: 8, top: 3, bottom: 3 }
         }).setOrigin(0.5);
 
-        const speakerBadge = this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 58, 140, 28, 0x17132a, 0.82)
-            .setStrokeStyle(0, 0x000000, 0);
-        const speakerText = this.add.text(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 58, '', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '14px',
-            color: '#c9ffef'
-        }).setOrigin(0.5);
-
-        const questionBox = this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 210, QUIZ_LAYOUT.leftPanel.y + 108, 330, 150, 0x090714, 0.58)
-            .setOrigin(0, 0)
-            .setStrokeStyle(0, 0x000000, 0);
-        const questionText = this.add.text(QUIZ_LAYOUT.leftPanel.x + 226, QUIZ_LAYOUT.leftPanel.y + 128, '', {
+        const questionText = this.add.text(QUIZ_LAYOUT.leftPanel.x + 286, QUIZ_LAYOUT.leftPanel.y + 88, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
-            color: '#f8f3ff',
-            wordWrap: { width: 296 },
+            color: '#000000',
+            wordWrap: { width: 446 },
             lineSpacing: 6
         });
 
-        const statusBox = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x + 26, QUIZ_LAYOUT.rightPanel.y + 54, 506, 360, 0x090714, 0.5)
+        const statusBox = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x + 66, QUIZ_LAYOUT.rightPanel.y + 84, 250, 360, 0x090714, 0.5)
             .setOrigin(0, 0)
-            .setStrokeStyle(0, 0x000000, 0);
-        const statusText = this.add.text(QUIZ_LAYOUT.rightPanel.x + 40, QUIZ_LAYOUT.rightPanel.y + 70, '', {
+            .setVisible(false);
+        const statusText = this.add.text(QUIZ_LAYOUT.rightPanel.x + 190, QUIZ_LAYOUT.rightPanel.y + 70, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
-            color: '#f8f3ff',
+            color: '#000000',
             wordWrap: { width: 468 },
             lineSpacing: 8
         });
@@ -372,17 +349,12 @@ export class InspectionGateScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.quizOverlay.add([
+            background,
             shade,
-            subtitle,
             leftPanel,
             rightPanel,
-            leftLabel,
-            rightLabel,
             portrait,
             portraitLabel,
-            speakerBadge,
-            speakerText,
-            questionBox,
             questionText,
             statusBox,
             statusText,
@@ -390,7 +362,6 @@ export class InspectionGateScene extends Phaser.Scene {
             feedbackText
         ]);
 
-        this.questionTitleText = speakerText;
         this.questionText = questionText;
         this.statusText = statusText;
         this.feedbackText = feedbackText;
@@ -415,14 +386,13 @@ export class InspectionGateScene extends Phaser.Scene {
 
         GameState.set('stage4QuestionIndex', this.currentQuestionIndex);
 
-        this.questionTitleText?.setText(question.speaker);
         this.questionText?.setText(question.question);
-        this.statusText?.setText([question.statusTitle, '', ...question.statusLines].join('\n'));
+        this.statusText?.setText(question.statusLines.join('\n'));
         this.setFeedback('', false);
 
         this.answerButtons = question.answers.map((answer, index) => {
             const layout = QUIZ_LAYOUT.answerButtons[index];
-            return this.createAnswerButton(layout.x, layout.y, layout.width, layout.height, answer.text, () => this.handleAnswerSelection(index));
+            return this.createAnswerButton(layout.x + 180, layout.y, layout.width, layout.height, answer.text, () => this.handleAnswerSelection(index));
         });
         this.quizOverlay.add(this.answerButtons.flatMap((button) => button.nodes));
     }
@@ -432,20 +402,20 @@ export class InspectionGateScene extends Phaser.Scene {
         let hoverBg = null;
 
         if (hasTexture(this, ASSETS.ui.buttonNormal.key)) {
-            bg = this.add.image(x, y, ASSETS.ui.buttonNormal.key).setDisplaySize(width, height).setDepth(982);
+            bg = this.add.image(x, y, ASSETS.ui.buttonNormal.key).setDisplaySize(width, height).setDepth(982).setAlpha(0.16);
             if (hasTexture(this, ASSETS.ui.buttonHover.key)) {
-                hoverBg = this.add.image(x, y, ASSETS.ui.buttonHover.key).setDisplaySize(width, height).setVisible(false).setDepth(982);
+                hoverBg = this.add.image(x, y, ASSETS.ui.buttonHover.key).setDisplaySize(width, height).setVisible(false).setDepth(982).setAlpha(0.3);
             }
         } else {
-            bg = this.add.rectangle(x, y, width, height, 0x24183f, 1).setStrokeStyle(0, 0x000000, 0).setDepth(982);
+            bg = this.add.rectangle(x, y, width, height, 0x24183f, 1).setStrokeStyle(0, 0x000000, 0).setDepth(982).setAlpha(0.16);
         }
 
-        const text = this.add.text(x, y, label, {
+        const text = this.add.text(x + 110, y, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff',
             align: 'center',
-            wordWrap: { width: width - 20 },
+            wordWrap: { width: width - 10 },
             lineSpacing: 4
         }).setOrigin(0.5).setDepth(983);
 
@@ -455,8 +425,8 @@ export class InspectionGateScene extends Phaser.Scene {
 
         const applyState = () => {
             if (!enabled) {
-                bg?.setAlpha?.(0.42);
-                hoverBg?.setAlpha?.(0.42);
+                bg?.setAlpha?.(0.08);
+                hoverBg?.setAlpha?.(0.08);
                 text?.setAlpha?.(0.58);
                 return;
             }
@@ -464,42 +434,25 @@ export class InspectionGateScene extends Phaser.Scene {
             if (selected) {
                 text?.setColor?.('#fff5c7');
                 text?.setFontStyle?.('bold');
-                if (hoverBg) {
-                    hoverBg?.setVisible?.(false);
-                    bg?.setVisible?.(true);
-                } else {
-                    bg?.setFillStyle?.(0x7860b4, 0.55);
-                }
                 return;
             }
 
             text?.setColor?.('#f8f3ff');
             text?.setFontStyle?.('normal');
-            if (!hoverBg) {
-                bg?.setFillStyle?.(0x24183f, 1);
-            }
         };
 
         hit.on('pointerover', () => {
             if (!enabled || selected) {
                 return;
             }
-            if (hoverBg) {
-                bg.setVisible(false);
-                hoverBg.setVisible(true);
-            } else {
-                bg.setFillStyle(0x322159, 1);
-            }
+            text.setColor('#fff5c7');
         });
         hit.on('pointerout', () => {
             if (!enabled) {
                 return;
             }
-            if (hoverBg) {
-                bg.setVisible(true);
-                hoverBg.setVisible(false);
-            } else if (!selected) {
-                bg.setFillStyle(0x24183f, 1);
+            if (!selected) {
+                text.setColor('#f8f3ff');
             }
         });
         hit.on('pointerdown', (pointer, localX, localY, event) => {
@@ -748,17 +701,13 @@ export class InspectionGateScene extends Phaser.Scene {
     }
 
     clearQuizNodes() {
-        this.questionTitleText?.destroy();
         this.questionText?.destroy();
         this.statusText?.destroy();
-        this.speakerText?.destroy();
         this.questionPortrait?.destroy();
         this.questionPortraitLabel?.destroy();
         this.feedbackText?.destroy();
-        this.questionTitleText = null;
         this.questionText = null;
         this.statusText = null;
-        this.speakerText = null;
         this.questionPortrait = null;
         this.questionPortraitLabel = null;
         this.feedbackText = null;

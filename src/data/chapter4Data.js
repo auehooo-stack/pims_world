@@ -8,9 +8,8 @@ export const chapter4Data = {
     assistantNpc: { x: 250, y: 460, width: 98, height: 135 },
     inspectionDesk: { x: 648, y: 400, width: 300, height: 150 },
     briefingLines: [
-        { speaker: 'KCA 간사', text: '실태점검은 지적만 하러 오는 절차가 아닙니다. 사업이 계획대로 진행되고 있는지 함께 확인하는 과정입니다.' },
-        { speaker: 'KCA 간사', text: '방에 들어오시면 먼저 실태점검 안내를 확인해 주세요. 점검 데스크에서 본격적인 질의응답이 시작됩니다.' },
-        { speaker: 'KCA 간사', text: '실태점검은 준비 상태를 같이 살펴보는 과정입니다. 너무 부담 갖지 않으셔도 됩니다.' }
+        { speaker: 'KCA 간사', text: '실태점검은 지적을 하러 오는 절차가 아닙니다.\n사업이 계획대로 진행되고 있는지 함께 확인하는 과정입니다.' },
+        { speaker: 'KCA 간사', text: '방에 들어오시면 먼저 실태점검 안내를 확인해 주세요.\n점검 데스크에서 본격적인 질의응답이 시작됩니다.' },
     ],
     successLines: [
         { speaker: 'KCA 팀장님', text: '좋습니다. 이런 식으로 설명하면 됩니다.' },
@@ -26,7 +25,6 @@ export const chapter4Data = {
         {
             id: 'low_execution_rate',
             speaker: 'KCA 팀장님',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '현재 시점: 7월',
                 '전체 집행률: 18%',
@@ -57,7 +55,6 @@ export const chapter4Data = {
         {
             id: 'service_cost_zero',
             speaker: 'KCA 팀장님',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '용역비 예산: 30,000,000원',
                 '용역비 집행액: 0원',
@@ -83,7 +80,6 @@ export const chapter4Data = {
         {
             id: 'business_expense',
             speaker: 'KCA 팀장님',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '사업추진비 집행률: 68%',
                 '',
@@ -105,7 +101,6 @@ export const chapter4Data = {
         {
             id: 'asset_registration',
             speaker: 'KCA 팀장님',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '자산취득비 집행률: 60%',
                 '',
@@ -130,7 +125,6 @@ export const chapter4Data = {
         {
             id: 'schedule_delay',
             speaker: 'KCA 팀장님',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '당초 계획',
                 '- 6월: 용역 착수',
@@ -153,7 +147,6 @@ export const chapter4Data = {
         {
             id: 'audit_firm',
             speaker: '회계법인 회계사',
-            statusTitle: '현재 사업 현황',
             statusLines: [
                 '회계법인 집행점검 예정',
                 '',
