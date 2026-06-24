@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+﻿import * as Phaser from 'phaser';
 import { chapter4Data } from '../data/chapter4Data.js';
 import { GameState } from '../systems/GameState.js';
 import { DialogueManager } from '../systems/DialogueManager.js';
@@ -10,16 +10,20 @@ import { TopHUD } from '../objects/TopHUD.js';
 import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
+const DEV_STAGE4_VIEW_KEY = 'pims_world.dev.stage4_view';
+const DEV_STAGE4_LOCK_KEY = 'pims_world.dev.stage4_lock';
+const DEV_STAGE4_VIEW_DEFAULT = import.meta.env.DEV;
+
 const QUIZ_LAYOUT = {
     backdrop: { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, width: GAME_WIDTH, height: GAME_HEIGHT },
     leftPanel: { x: 50, y: 110, width: 560, height: 470 },
     rightPanel: { x: 670, y: 110, width: 560, height: 470 },
-    feedback: { x: CENTER_X, y: 618, width: 1140, height: 52 },
+    feedback: { x: CENTER_X, y: 614, width: 910, height: 43 },
     answerButtons: [
-        { x: 74, y: 410, width: 228, height: 56 },
-        { x: 384, y: 410, width: 228, height: 56 },
-        { x: 74, y: 490, width: 228, height: 56 },
-        { x: 384, y: 490, width: 228, height: 56 }
+        { x: 480, y: 338, width: 540, height: 54 },
+        { x: 480, y: 403, width: 540, height: 54 },
+        { x: 480, y: 468, width: 540, height: 54 },
+        { x: 480, y: 533, width: 540, height: 54 }
     ]
 };
 
@@ -38,13 +42,34 @@ export class InspectionGateScene extends Phaser.Scene {
         this.answerButtons = [];
         this.feedbackText = null;
         this.questionText = null;
+        this.questionLabel = null;
         this.statusText = null;
+        this.statusNodes = [];
         this.questionPortrait = null;
         this.questionPortraitLabel = null;
+        this.auditFirmAccountant = null;
+        this.auditFirmAccountantLabel = null;
         this.roomHintText = null;
-        this.onSpaceDown = null;
-        this.onEnterDown = null;
+        this.devLockIndicator = null;
+        this.onF8Down = null;
+        this.onWindowKeyDown = null;
         this.onPointerDown = null;
+    }
+
+    isDevQuizViewLocked() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return false;
+        }
+
+        try {
+            const raw = window.sessionStorage.getItem(DEV_STAGE4_LOCK_KEY);
+            if (raw === null) {
+                return DEV_STAGE4_VIEW_DEFAULT;
+            }
+            return raw === '1';
+        } catch {
+            return DEV_STAGE4_VIEW_DEFAULT;
+        }
     }
 
     create() {
@@ -58,6 +83,7 @@ export class InspectionGateScene extends Phaser.Scene {
         GameState.set('stage4WrongCount', 0);
         GameState.set('stage4Cleared', false);
         GameState.set('stage4Failed', false);
+        this.restoreDevQuizView();
 
         playBgmWithFade(this, ASSETS.audio.bgmMain.key, { loop: true, volume: 0.35 }, 900);
         this.cameras.main.setBackgroundColor(0x090714);
@@ -73,11 +99,19 @@ export class InspectionGateScene extends Phaser.Scene {
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        this.f8Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F8);
 
         this.onSpaceDown = () => this.tryInteract();
         this.onEnterDown = () => {
             if (!this.dialogue.isActive) {
                 this.tryInteract();
+            }
+        };
+        this.onF8Down = () => this.toggleDevQuizLock();
+        this.onWindowKeyDown = (event) => {
+            if (event?.code === 'F8' || event?.key === 'F8') {
+                event.preventDefault?.();
+                this.toggleDevQuizLock();
             }
         };
         this.onPointerDown = (pointer) => {
@@ -89,10 +123,22 @@ export class InspectionGateScene extends Phaser.Scene {
 
         this.spaceKey.on('down', this.onSpaceDown);
         this.enterKey.on('down', this.onEnterDown);
+        this.f8Key.on('down', this.onF8Down);
         this.input.on('pointerdown', this.onPointerDown);
+        window?.addEventListener?.('keydown', this.onWindowKeyDown);
         this.events.once('shutdown', () => this.cleanup());
 
-        this.time.delayedCall(220, () => this.playBriefing());
+        if (this.isDevQuizViewLocked()) {
+            this.mode = 'quiz';
+            GameState.set('stage4BriefingDone', true);
+            GameState.set('stage4QuizActive', true);
+            this.bottomHud.container?.setVisible(false);
+            this.bottomHud.setInteractionVisible(false);
+            this.createQuizOverlay();
+            this.renderQuestion();
+        } else {
+            this.time.delayedCall(220, () => this.playBriefing());
+        }
         this.refreshHud();
     }
 
@@ -127,6 +173,24 @@ export class InspectionGateScene extends Phaser.Scene {
     createWorld() {
         this.player = new Player(this, chapter4Data.playerStart.x, chapter4Data.playerStart.y);
         this.player.speed = 260;
+        this.auditFirmAccountant?.destroy?.();
+        this.auditFirmAccountantLabel?.destroy?.();
+        const accountantX = chapter4Data.inspectionDesk.x + chapter4Data.inspectionDesk.width - 78;
+        const accountantY = chapter4Data.inspectionDesk.y + 32;
+        this.auditFirmAccountantLabel = this.add.text(accountantX, accountantY + 88, '회계사', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '14px',
+            color: '#f8f3ff',
+            backgroundColor: 'rgba(18, 12, 34, 0.45)'
+        }).setOrigin(0.5, 1).setDepth(3);
+        this.auditFirmAccountant = hasTexture(this, ASSETS.characters.auditFirmAccountantIdle.key)
+            ? this.add.image(accountantX, accountantY, ASSETS.characters.auditFirmAccountantIdle.key)
+                .setDisplaySize(86, 136)
+                .setFlipX(true)
+                .setDepth(2)
+            : this.add.rectangle(accountantX, accountantY, 86, 136, 0x7a5cff, 0.18)
+                .setStrokeStyle(2, 0x7a5cff, 0.45)
+                .setDepth(2);
 
         this.interactables = [
             new InteractableObject(this, {
@@ -234,7 +298,7 @@ export class InspectionGateScene extends Phaser.Scene {
             }
 
             this.dialogue.say([
-                { speaker: 'KCA 간사', text: '실태점검에서는 사유와 향후 계획, 그리고 증빙 상태를 함께 설명하시면 됩니다.' }
+                { speaker: 'KCA Assistant', text: 'Please check the next item.' }
             ]);
             return;
         }
@@ -247,7 +311,7 @@ export class InspectionGateScene extends Phaser.Scene {
 
             if (GameState.get('stage4Cleared')) {
                 this.dialogue.say([
-                    { speaker: 'KCA 간사', text: '실태점검 컨설팅을 이미 마쳤습니다. 다음 준비를 이어가세요.' }
+                    { speaker: 'KCA Assistant', text: 'Please review the requested item.' }
                 ]);
                 return;
             }
@@ -278,10 +342,74 @@ export class InspectionGateScene extends Phaser.Scene {
 
         this.mode = 'quiz';
         GameState.set('stage4QuizActive', true);
+        if (this.isDevQuizViewLocked()) {
+            this.saveDevQuizView();
+        }
         this.bottomHud.container?.setVisible(false);
         this.bottomHud.setInteractionVisible(false);
         this.createQuizOverlay();
         this.renderQuestion();
+    }
+
+    toggleDevQuizLock() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return;
+        }
+
+        const nextLocked = !this.isDevQuizViewLocked();
+        try {
+            window.sessionStorage.setItem(DEV_STAGE4_LOCK_KEY, nextLocked ? '1' : '0');
+        } catch {
+            // Ignore storage failures in dev.
+        }
+
+        if (nextLocked) {
+            GameState.set('stage4BriefingDone', true);
+            GameState.set('stage4QuizActive', true);
+            this.mode = 'quiz';
+            this.bottomHud.container?.setVisible(false);
+            this.bottomHud.setInteractionVisible(false);
+            this.clearQuizOverlay();
+            this.restoreDevQuizView();
+            this.createQuizOverlay();
+            this.renderQuestion();
+            this.showDevLockIndicator('LOCK ON');
+            return;
+        }
+
+        this.clearDevQuizView();
+        GameState.set('stage4QuizActive', false);
+        this.mode = 'field';
+        this.clearQuizOverlay();
+        this.topHud?.container?.setVisible(true);
+        this.bottomHud?.container?.setVisible(true);
+        this.bottomHud?.setInteractionVisible(true);
+        this.bottomHud?.setInteractionPrompt(GameState.get('stage4Cleared') ? '' : chapter4Data.roomPrompt);
+        this.refreshHud();
+        this.showDevLockIndicator('LOCK OFF');
+    }
+
+    showDevLockIndicator(text) {
+        if (!import.meta.env.DEV) {
+            return;
+        }
+
+        this.devLockIndicator?.destroy?.();
+        this.devLockIndicator = this.add.text(GAME_WIDTH - 24, 24, text, {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff5c7',
+            backgroundColor: 'rgba(7, 10, 20, 0.82)',
+            padding: { left: 10, right: 10, top: 6, bottom: 6 }
+        })
+            .setOrigin(1, 0)
+            .setScrollFactor(0)
+            .setDepth(2000);
+
+        this.time.delayedCall(1200, () => {
+            this.devLockIndicator?.destroy?.();
+            this.devLockIndicator = null;
+        });
     }
 
     createQuizOverlay() {
@@ -305,41 +433,35 @@ export class InspectionGateScene extends Phaser.Scene {
             .setOrigin(0, 0)
             .setStrokeStyle(0, 0x000000, 0);
         const portrait = hasTexture(this, ASSETS.characters.kcaTeamLeaderIdle.key)
-            ? this.add.image(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 132, ASSETS.characters.kcaTeamLeaderIdle.key)
-                .setDisplaySize(116, 160)
+            ? this.add.image(QUIZ_LAYOUT.leftPanel.x + 195, QUIZ_LAYOUT.leftPanel.y + 112, ASSETS.characters.kcaTeamLeaderIdle.key)
+                .setDisplaySize(90, 144)
                 .setFlipX(true)
-            : this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 220, QUIZ_LAYOUT.leftPanel.y + 132, 116, 160, 0xff4f86, 0.18)
+            : this.add.rectangle(QUIZ_LAYOUT.leftPanel.x + 195, QUIZ_LAYOUT.leftPanel.y + 112, 90, 144, 0xff4f86, 0.18)
                 .setStrokeStyle(2, 0xff4f86, 0.6);
-        const portraitLabel = this.add.text(QUIZ_LAYOUT.leftPanel.x + 136, QUIZ_LAYOUT.leftPanel.y + 96, 'KCA 팀장님', {
+        if (portrait?.setFlipX && portrait?.texture) {
+            portrait.setFlipX(true);
+            portrait.setScale(-Math.abs(portrait.scaleX || 1), portrait.scaleY || 1);
+        }
+        const questionLabel = this.add.text(QUIZ_LAYOUT.leftPanel.x + 265, QUIZ_LAYOUT.leftPanel.y + 54, 'KCA 팀장', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '14px',
             color: '#ffd36e',
             backgroundColor: 'rgba(18, 12, 34, 0.62)',
             padding: { left: 8, right: 8, top: 3, bottom: 3 }
-        }).setOrigin(0.5);
-
-        const questionText = this.add.text(QUIZ_LAYOUT.leftPanel.x + 286, QUIZ_LAYOUT.leftPanel.y + 88, '', {
+        }).setOrigin(0, 0.5);
+        const questionText = this.add.text(QUIZ_LAYOUT.leftPanel.x + 265, QUIZ_LAYOUT.leftPanel.y + 78, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#000000',
             wordWrap: { width: 446 },
             lineSpacing: 6
         });
-
         const statusBox = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x + 66, QUIZ_LAYOUT.rightPanel.y + 84, 250, 360, 0x090714, 0.5)
             .setOrigin(0, 0)
             .setVisible(false);
-        const statusText = this.add.text(QUIZ_LAYOUT.rightPanel.x + 190, QUIZ_LAYOUT.rightPanel.y + 70, '', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '15px',
-            color: '#000000',
-            wordWrap: { width: 468 },
-            lineSpacing: 8
-        });
-
-        const feedbackBox = this.add.rectangle(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, QUIZ_LAYOUT.feedback.width, QUIZ_LAYOUT.feedback.height, 0x05050a, 0.76)
+        const feedbackBox = this.add.rectangle(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, QUIZ_LAYOUT.feedback.width, QUIZ_LAYOUT.feedback.height, 0x05050a, 0.28)
             .setOrigin(0.5)
-            .setStrokeStyle(1, 0x9d5dd6, 0.65);
+            .setStrokeStyle(0, 0x000000, 0);
         const feedbackText = this.add.text(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
@@ -354,19 +476,20 @@ export class InspectionGateScene extends Phaser.Scene {
             leftPanel,
             rightPanel,
             portrait,
-            portraitLabel,
+            questionLabel,
             questionText,
             statusBox,
-            statusText,
             feedbackBox,
             feedbackText
         ]);
 
         this.questionText = questionText;
-        this.statusText = statusText;
+        this.statusText = null;
         this.feedbackText = feedbackText;
         this.questionPortrait = portrait;
-        this.questionPortraitLabel = portraitLabel;
+        this.questionLabel = questionLabel;
+        this.questionPortraitLabel = null;
+        this.statusNodes = [];
     }
 
     renderQuestion() {
@@ -387,39 +510,61 @@ export class InspectionGateScene extends Phaser.Scene {
         GameState.set('stage4QuestionIndex', this.currentQuestionIndex);
 
         this.questionText?.setText(question.question);
-        this.statusText?.setText(question.statusLines.join('\n'));
+        this.questionLabel?.setText(question.speaker === '회계법인 회계사' ? '회계사' : 'KCA 팀장');
+        if (this.questionPortrait?.setTexture && this.questionPortrait?.setDisplaySize) {
+            if (question.speaker === '회계법인 회계사' && hasTexture(this, ASSETS.characters.auditFirmAccountantIdle.key)) {
+                this.questionPortrait.setTexture(ASSETS.characters.auditFirmAccountantIdle.key);
+                this.questionPortrait.setDisplaySize(80, 136);
+                this.questionPortrait.setFlipX(true);
+                this.questionPortrait.setScale(-Math.abs(this.questionPortrait.scaleX || 1), this.questionPortrait.scaleY || 1);
+            } else {
+                this.questionPortrait.setTexture(ASSETS.characters.kcaTeamLeaderIdle.key);
+                this.questionPortrait.setDisplaySize(90, 144);
+                this.questionPortrait.setFlipX(true);
+                this.questionPortrait.setScale(-Math.abs(this.questionPortrait.scaleX || 1), this.questionPortrait.scaleY || 1);
+            }
+        }
+        this.renderStatusLines(question.statusLines);
         this.setFeedback('', false);
+        if (this.isDevQuizViewLocked()) {
+            this.saveDevQuizView();
+        }
 
-        this.answerButtons = question.answers.map((answer, index) => {
+        const shuffledAnswers = this.shuffleAnswers(question.answers);
+        this.answerButtons = shuffledAnswers.map((answer, index) => {
             const layout = QUIZ_LAYOUT.answerButtons[index];
-            return this.createAnswerButton(layout.x + 180, layout.y, layout.width, layout.height, answer.text, () => this.handleAnswerSelection(index));
+            return this.createAnswerButton(layout.x, layout.y, layout.width, layout.height, answer.text, () => this.handleAnswerSelection(answer));
         });
         this.quizOverlay.add(this.answerButtons.flatMap((button) => button.nodes));
     }
 
     createAnswerButton(x, y, width, height, label, onClick) {
+        const leftExtend = 33;
+        const rightExtend = 20;
+        const buttonX = x - leftExtend / 2 + rightExtend / 2;
+        const buttonWidth = width + leftExtend + rightExtend;
         let bg;
         let hoverBg = null;
 
         if (hasTexture(this, ASSETS.ui.buttonNormal.key)) {
-            bg = this.add.image(x, y, ASSETS.ui.buttonNormal.key).setDisplaySize(width, height).setDepth(982).setAlpha(0.16);
+            bg = this.add.image(buttonX, y, ASSETS.ui.buttonNormal.key).setDisplaySize(buttonWidth, height).setDepth(982).setAlpha(0.12);
             if (hasTexture(this, ASSETS.ui.buttonHover.key)) {
-                hoverBg = this.add.image(x, y, ASSETS.ui.buttonHover.key).setDisplaySize(width, height).setVisible(false).setDepth(982).setAlpha(0.3);
+                hoverBg = this.add.image(buttonX, y, ASSETS.ui.buttonHover.key).setDisplaySize(buttonWidth, height).setVisible(false).setDepth(982).setAlpha(0.68);
             }
         } else {
-            bg = this.add.rectangle(x, y, width, height, 0x24183f, 1).setStrokeStyle(0, 0x000000, 0).setDepth(982).setAlpha(0.16);
+            bg = this.add.rectangle(buttonX, y, buttonWidth, height, 0x24183f, 0.14).setStrokeStyle(0, 0x000000, 0).setDepth(982);
         }
 
-        const text = this.add.text(x + 110, y, label, {
+        const text = this.add.text(x - width / 2 + 18, y, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
             color: '#f8f3ff',
-            align: 'center',
-            wordWrap: { width: width - 10 },
+            align: 'left',
+            wordWrap: { width: width - 36 },
             lineSpacing: 4
-        }).setOrigin(0.5).setDepth(983);
+        }).setOrigin(0, 0.5).setDepth(983);
 
-        const hit = this.add.rectangle(x, y, width, height, 0x000000, 0).setDepth(984).setInteractive({ useHandCursor: true });
+        const hit = this.add.rectangle(buttonX, y, buttonWidth, height, 0x000000, 0).setDepth(984).setInteractive({ useHandCursor: true });
         let selected = false;
         let enabled = true;
 
@@ -445,7 +590,14 @@ export class InspectionGateScene extends Phaser.Scene {
             if (!enabled || selected) {
                 return;
             }
-            text.setColor('#fff5c7');
+            text.setColor('#f8f3ff');
+            text.setFontStyle('normal');
+            if (hoverBg) {
+                bg.setVisible(false);
+                hoverBg.setVisible(true);
+            } else {
+                bg.setFillStyle(0xffffff, 0.14);
+            }
         });
         hit.on('pointerout', () => {
             if (!enabled) {
@@ -453,6 +605,13 @@ export class InspectionGateScene extends Phaser.Scene {
             }
             if (!selected) {
                 text.setColor('#f8f3ff');
+                text.setFontStyle('normal');
+            }
+            if (hoverBg) {
+                bg.setVisible(true);
+                hoverBg.setVisible(false);
+            } else {
+                bg.setFillStyle(0x24183f, 0.14);
             }
         });
         hit.on('pointerdown', (pointer, localX, localY, event) => {
@@ -498,7 +657,7 @@ export class InspectionGateScene extends Phaser.Scene {
         };
     }
 
-    handleAnswerSelection(index) {
+    handleAnswerSelection(answer) {
         if (this.transitionLocked || this.mode !== 'quiz') {
             return;
         }
@@ -507,13 +666,6 @@ export class InspectionGateScene extends Phaser.Scene {
         if (!question) {
             return;
         }
-
-        const answer = question.answers[index];
-        if (!answer) {
-            return;
-        }
-
-        this.answerButtons.forEach((button, buttonIndex) => button.setSelected(buttonIndex === index));
 
         if (answer.correct) {
             this.transitionLocked = true;
@@ -550,6 +702,15 @@ export class InspectionGateScene extends Phaser.Scene {
         });
     }
 
+    shuffleAnswers(answers) {
+        const shuffled = [...(answers || [])];
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
     setFeedback(message, success = false) {
         if (!this.feedbackText) {
             return;
@@ -557,6 +718,77 @@ export class InspectionGateScene extends Phaser.Scene {
 
         this.feedbackText.setText(message || '');
         this.feedbackText.setColor(success ? '#c9ffef' : '#fff0c4');
+        this.feedbackText.setAlpha(1);
+    }
+
+    clearStatusNodes() {
+        this.statusNodes?.forEach((node) => node?.destroy?.());
+        this.statusNodes = [];
+    }
+
+    renderStatusLines(lines = []) {
+        this.clearStatusNodes();
+        if (!this.quizOverlay) {
+            return;
+        }
+
+        const baseX = QUIZ_LAYOUT.rightPanel.x + 180;
+        const baseY = QUIZ_LAYOUT.rightPanel.y + 70;
+        const lineStep = 23;
+        const baseStyle = {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '15px',
+            color: '#000000'
+        };
+        const boldLabels = new Set([
+            '현재 시점',
+            '전체 집행률',
+            '비세목별 집행률',
+            '특이사항',
+            '주요 집행 내역',
+            '구매 장비',
+            '당초 계획',
+            '현재 상태'
+        ]);
+
+        lines.forEach((rawLine, index) => {
+            const line = String(rawLine ?? '');
+            const y = baseY + (index * lineStep);
+
+            if (!line.trim()) {
+                return;
+            }
+
+            const colonIndex = line.indexOf(':');
+            if (colonIndex >= 0) {
+                const prefix = line.slice(0, colonIndex + 1);
+                const suffix = line.slice(colonIndex + 1);
+                const prefixLabel = prefix.replace(/:$/, '');
+                if (boldLabels.has(prefixLabel)) {
+                    const prefixText = this.add.text(baseX, y, prefix, {
+                        ...baseStyle,
+                        fontStyle: 'bold'
+                    }).setOrigin(0, 0);
+                    const prefixWidth = prefixText.displayWidth || prefixText.width || 0;
+                    const suffixText = this.add.text(baseX + prefixWidth, y, suffix, baseStyle).setOrigin(0, 0);
+                    this.quizOverlay.add([prefixText, suffixText]);
+                    this.statusNodes.push(prefixText, suffixText);
+                    return;
+                }
+
+                const fullText = this.add.text(baseX, y, line, baseStyle).setOrigin(0, 0);
+                this.quizOverlay.add(fullText);
+                this.statusNodes.push(fullText);
+                return;
+            }
+
+            const headingText = this.add.text(baseX, y, line, {
+                ...baseStyle,
+                fontStyle: boldLabels.has(line) ? 'bold' : 'normal'
+            }).setOrigin(0, 0);
+            this.quizOverlay.add(headingText);
+            this.statusNodes.push(headingText);
+        });
     }
 
     completeInspectionGate() {
@@ -587,7 +819,7 @@ export class InspectionGateScene extends Phaser.Scene {
         const panel = this.add.rectangle(CENTER_X, 348, 840, 340, 0x11172a, 0.92)
             .setOrigin(0.5)
             .setStrokeStyle(2, 0x9d5dd6, 0.78);
-        const title = this.add.text(CENTER_X, 178, '실태점검 컨설팅 완료', {
+        const title = this.add.text(CENTER_X, 178, 'Stage 4 Inspection Complete', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '40px',
             color: '#fff5c7',
@@ -595,10 +827,10 @@ export class InspectionGateScene extends Phaser.Scene {
             strokeThickness: 5
         }).setOrigin(0.5);
         const summary = this.add.text(CENTER_X, 262, [
-            `총 질문 수: ${chapter4Data.questions.length}`,
-            `정답 수: ${GameState.get('stage4CorrectCount') || 0}`,
-            `오답 수: ${GameState.get('stage4WrongCount') || 0}`,
-            `남은 HP: ${GameState.get('hp') ?? 0}`
+            `????????椰???????????????? ${chapter4Data.questions.length}`,
+            `???????嫄???????????????? ${GameState.get('stage4CorrectCount') || 0}`,
+            `????????釉먮폁??????饔낅떽???????꾩렯???????? ${GameState.get('stage4WrongCount') || 0}`,
+            `??? HP: ${GameState.get('hp') ?? 0}`
         ].join('\n'), {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '20px',
@@ -606,7 +838,7 @@ export class InspectionGateScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: 10
         }).setOrigin(0.5);
-        const body = this.add.text(CENTER_X, 404, '실태점검 대응 완료!\n사업 현황, 집행률, 미집행 사유, 증빙 관리 상태를 점검했습니다.', {
+        const body = this.add.text(CENTER_X, 404, '?????????????沅걔??? ??????????????諛몃마嶺뚮?????????????硫λ젒??\n??????????????????? ??????椰?????????癲됱빖???嶺???????????????????? ??????????????????癲됱빖???嶺??亦껋꼷伊볡댚?쒗닧???????耀붾굝????????????, ??????椰????????????????傭?끆?????용벥????????????????嶺뚮ㅎ?볠꽴??????????????????????????????????????살몝??', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: '#c9ffef',
@@ -615,10 +847,10 @@ export class InspectionGateScene extends Phaser.Scene {
             lineSpacing: 8
         }).setOrigin(0.5);
 
-        this.createResultButton(CENTER_X - 160, 580, '방으로 돌아가기', () => {
+        this.createResultButton(CENTER_X - 160, 580, 'Back to Room', () => {
             this.returnToRoom();
         });
-        this.createResultButton(CENTER_X + 160, 580, '다시 점검하기', () => {
+        this.createResultButton(CENTER_X + 160, 580, 'Retry Inspection', () => {
             this.restartStage4();
         });
 
@@ -679,6 +911,9 @@ export class InspectionGateScene extends Phaser.Scene {
         this.mode = 'field';
         GameState.set('timeRunning', true);
         GameState.set('stage4QuizActive', false);
+        if (this.isDevQuizViewLocked()) {
+            this.saveDevQuizView();
+        }
         this.topHud?.container?.setVisible(true);
         this.bottomHud?.container?.setVisible(true);
         this.bottomHud?.setInteractionVisible(true);
@@ -697,17 +932,76 @@ export class InspectionGateScene extends Phaser.Scene {
         GameState.set('stage4Cleared', false);
         GameState.set('stage4Failed', false);
         GameState.set('timeRunning', true);
+        this.clearDevQuizView();
         this.scene.restart();
+    }
+
+    getDevQuizView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return null;
+        }
+
+        try {
+            const raw = window.sessionStorage.getItem(DEV_STAGE4_VIEW_KEY);
+            if (!raw) {
+                return null;
+            }
+
+            const parsed = JSON.parse(raw);
+            return Number.isInteger(parsed?.questionIndex) ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    saveDevQuizView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem(DEV_STAGE4_VIEW_KEY, JSON.stringify({
+                questionIndex: this.currentQuestionIndex
+            }));
+        } catch {
+            // Ignore storage failures in dev.
+        }
+    }
+
+    restoreDevQuizView() {
+        const saved = this.getDevQuizView();
+        if (!saved) {
+            return;
+        }
+
+        const maxIndex = Math.max(0, chapter4Data.questions.length - 1);
+        this.currentQuestionIndex = Phaser.Math.Clamp(saved.questionIndex, 0, maxIndex);
+    }
+
+    clearDevQuizView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            window.sessionStorage.removeItem(DEV_STAGE4_VIEW_KEY);
+        } catch {
+            // Ignore storage failures in dev.
+        }
     }
 
     clearQuizNodes() {
         this.questionText?.destroy();
+        this.questionLabel?.destroy();
         this.statusText?.destroy();
+        this.clearStatusNodes();
         this.questionPortrait?.destroy();
         this.questionPortraitLabel?.destroy();
         this.feedbackText?.destroy();
         this.questionText = null;
+        this.questionLabel = null;
         this.statusText = null;
+        this.statusNodes = [];
         this.questionPortrait = null;
         this.questionPortraitLabel = null;
         this.feedbackText = null;
@@ -747,7 +1041,18 @@ export class InspectionGateScene extends Phaser.Scene {
         this.spaceKey?.off('down', this.onSpaceDown);
         this.enterKey?.off('down', this.onEnterDown);
         this.input.off('pointerdown', this.onPointerDown);
+        window?.removeEventListener?.('keydown', this.onWindowKeyDown);
         this.clearQuizOverlay();
         this.clearResultOverlay();
+        this.devLockIndicator?.destroy?.();
+        this.devLockIndicator = null;
+        this.auditFirmAccountant?.destroy?.();
+        this.auditFirmAccountant = null;
+        this.auditFirmAccountantLabel?.destroy?.();
+        this.auditFirmAccountantLabel = null;
     }
 }
+
+
+
+

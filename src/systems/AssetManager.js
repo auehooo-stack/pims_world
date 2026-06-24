@@ -53,7 +53,8 @@ export const ASSETS = {
         kcaAssistantIdle: image('char_kca_assistant_idle', '/assets/characters/kca_assistant_idle.png'),
         kcaAssistantClosed: image('char_kca_assistant_closed', '/assets/characters/kca_assistant_closed.png'),
         kcaAssistantWalk: image('char_kca_assistant_walk', '/assets/characters/kca_assistant_walk.png'),
-        kcaTeamLeaderIdle: image('char_kca_team_leader_idle', '/assets/characters/kca_team_leader_idle.png')
+        kcaTeamLeaderIdle: image('char_kca_team_leader_idle', '/assets/characters/kca_team_leader_idle.png'),
+        auditFirmAccountantIdle: image('char_audit_firm_accountant_idle', '/assets/characters/audit_firm_accountant_idle.png')
     },
     objects: {
         cabinet: image('obj_cabinet', '/assets/objects/cabinet.png'),
