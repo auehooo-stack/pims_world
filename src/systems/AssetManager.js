@@ -38,6 +38,8 @@ export const ASSETS = {
         documentCheck: image('bg_document_check', '/assets/backgrounds/document_check_bg.png'),
         middleFerrisWheelReport: image('bg_middle_ferris_wheel_report', '/assets/backgrounds/middle_ferris_wheel_report_bg.png'),
         documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),
+        transformationRoom: image('bg_transformation_room', '/assets/backgrounds/transformation_room_bg.png'),
+        transformationRoomQuiz: image('bg_transformation_room_quiz', '/assets/backgrounds/transformation_room_quiz_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
         stageClearClosed: image('bg_stage_clear_closed', '/assets/backgrounds/StageClearSceneClosed.png'),
         openingLogin: image('bg_opening_login', '/assets/opening/pims_login_screen.png')

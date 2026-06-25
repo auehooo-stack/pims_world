@@ -60,6 +60,17 @@ export const initialGameState = {
     stage4WrongCount: 0,
     stage4Cleared: false,
     stage4Failed: false,
+    currentCaseIndex: 0,
+    selectedChangeType: null,
+    shownAttachmentList: [],
+    isAnswerLocked: false,
+    mistakeCount: 0,
+    processedCount: 0,
+    villainEventTriggered: false,
+    feedbackMessage: '',
+    isMiniGameActive: false,
+    stage5BriefingDone: false,
+    stage5Cleared: false,
     savedPlayerPosition: null
 };
 
@@ -69,7 +80,7 @@ const cloneInitialState = () => ({
     currentDate: cloneDate(initialGameState.currentDate),
     endDate: cloneDate(initialGameState.endDate),
     stage3MissingItems: [...initialGameState.stage3MissingItems],
-    stage2InventoryItems: [...initialGameState.stage2InventoryItems]
+    stage2InventoryItems: [...initialGameState.stage2InventoryItems],
 });
 
 export const GameState = {
@@ -118,6 +129,16 @@ export const GameState = {
                 return '점검 데스크에서 실태점검 안내를 확인하세요.';
             }
             return '점검 질문에 가장 적절한 답변을 선택하세요.';
+        }
+
+        if (this.get('currentChapter') === 5) {
+            if (this.get('stage5Cleared')) {
+                return '변경유형 판정을 마쳤습니다.';
+            }
+            if (!this.get('isMiniGameActive')) {
+                return '협약변경의 방에서 변경유형을 판정하세요.';
+            }
+            return '변경 유형을 선택해 첨부서류를 확인하세요.';
         }
 
         if (this.get('currentChapter') === 2) {

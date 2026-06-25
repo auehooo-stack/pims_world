@@ -100,6 +100,7 @@ export class InspectionGateScene extends Phaser.Scene {
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
         this.f8Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F8);
+        this.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.F8);
 
         this.onSpaceDown = () => this.tryInteract();
         this.onEnterDown = () => {
@@ -124,6 +125,7 @@ export class InspectionGateScene extends Phaser.Scene {
         this.spaceKey.on('down', this.onSpaceDown);
         this.enterKey.on('down', this.onEnterDown);
         this.f8Key.on('down', this.onF8Down);
+        this.input.keyboard.on('keydown-F8', this.onF8Down);
         this.input.on('pointerdown', this.onPointerDown);
         window?.addEventListener?.('keydown', this.onWindowKeyDown);
         this.events.once('shutdown', () => this.cleanup());
@@ -803,58 +805,29 @@ export class InspectionGateScene extends Phaser.Scene {
         GameState.set('timeRunning', false);
         this.transitionLocked = true;
 
-        this.showResultOverlay();
+        this.clearQuizOverlay();
+        this.mode = 'field';
+        this.topHud?.container?.setVisible(true);
+        this.bottomHud?.container?.setVisible(true);
+        this.bottomHud?.setInteractionVisible(false);
+        this.bottomHud?.setInteractionPrompt('');
+        this.refreshHud();
+
+        this.dialogue.say([
+            { speaker: 'KCA 간사', text: '좋습니다. 점검 고생하셨습니다.' },
+            { speaker: 'KCA 간사', text: '다음으로 넘어가시죠.' }
+        ], () => {
+            this.scene.start('TransformationRoomScene');
+        });
     }
 
     showResultOverlay() {
         this.clearQuizOverlay();
-        this.topHud?.container?.setVisible(false);
-        this.bottomHud?.container?.setVisible(false);
-
-        this.resultOverlay?.destroy(true);
-        this.resultOverlay = this.add.container(0, 0).setDepth(990);
-
-        const shade = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.76)
-            .setOrigin(0.5);
-        const panel = this.add.rectangle(CENTER_X, 348, 840, 340, 0x11172a, 0.92)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, 0x9d5dd6, 0.78);
-        const title = this.add.text(CENTER_X, 178, 'Stage 4 Inspection Complete', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '40px',
-            color: '#fff5c7',
-            stroke: '#34145c',
-            strokeThickness: 5
-        }).setOrigin(0.5);
-        const summary = this.add.text(CENTER_X, 262, [
-            `????????椰???????????????? ${chapter4Data.questions.length}`,
-            `???????嫄???????????????? ${GameState.get('stage4CorrectCount') || 0}`,
-            `????????釉먮폁??????饔낅떽???????꾩렯???????? ${GameState.get('stage4WrongCount') || 0}`,
-            `??? HP: ${GameState.get('hp') ?? 0}`
-        ].join('\n'), {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '20px',
-            color: '#f8f3ff',
-            align: 'center',
-            lineSpacing: 10
-        }).setOrigin(0.5);
-        const body = this.add.text(CENTER_X, 404, '?????????????沅걔??? ??????????????諛몃마嶺뚮?????????????硫λ젒??\n??????????????????? ??????椰?????????癲됱빖???嶺???????????????????? ??????????????????癲됱빖???嶺??亦껋꼷伊볡댚?쒗닧???????耀붾굝????????????, ??????椰????????????????傭?끆?????용벥????????????????嶺뚮ㅎ?볠꽴??????????????????????????????????????살몝??', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#c9ffef',
-            align: 'center',
-            wordWrap: { width: 680 },
-            lineSpacing: 8
-        }).setOrigin(0.5);
-
-        this.createResultButton(CENTER_X - 160, 580, 'Back to Room', () => {
-            this.returnToRoom();
-        });
-        this.createResultButton(CENTER_X + 160, 580, 'Retry Inspection', () => {
-            this.restartStage4();
-        });
-
-        this.resultOverlay.add([shade, panel, title, summary, body].filter(Boolean));
+        this.topHud?.container?.setVisible(true);
+        this.bottomHud?.container?.setVisible(true);
+        this.bottomHud?.setInteractionVisible(false);
+        this.bottomHud?.setInteractionPrompt('');
+        this.refreshHud();
     }
 
     createResultButton(x, y, label, onClick) {
@@ -1040,6 +1013,8 @@ export class InspectionGateScene extends Phaser.Scene {
     cleanup() {
         this.spaceKey?.off('down', this.onSpaceDown);
         this.enterKey?.off('down', this.onEnterDown);
+        this.f8Key?.off('down', this.onF8Down);
+        this.input.keyboard.off('keydown-F8', this.onF8Down);
         this.input.off('pointerdown', this.onPointerDown);
         window?.removeEventListener?.('keydown', this.onWindowKeyDown);
         this.clearQuizOverlay();

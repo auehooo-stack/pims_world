@@ -237,6 +237,17 @@ export class TopHUD {
             const total = Number(GameState.get('stage4QuestionTotal') || 6);
             return `질문 ${Math.min(current, total)} / ${total}`;
         }
+        if (GameState.get('currentChapter') === 5) {
+            if (GameState.get('stage5Cleared')) {
+                return '완료';
+            }
+            if (!GameState.get('isMiniGameActive')) {
+                return '대기';
+            }
+            const current = Number(GameState.get('currentCaseIndex') || 0) + 1;
+            const total = 6;
+            return `패키지 ${Math.min(current, total)} / ${total}`;
+        }
         return `${GameState.get('executionRate')}%`;
     }
 
@@ -269,6 +280,7 @@ export class TopHUD {
         const chapter = GameState.get('currentChapter');
         this.stageBox.text?.setText(
             chapter === 4 ? '4단계: 실태점검의 관문'
+                : chapter === 5 ? '5단계: 협약변경의 방'
                 : chapter === 3 ? '3단계: 중간 관람차'
                 : chapter === 2 ? '2단계: 집행의 집'
                 : '1단계: 봉인된 금고'
