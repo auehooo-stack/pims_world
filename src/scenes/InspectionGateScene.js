@@ -99,20 +99,11 @@ export class InspectionGateScene extends Phaser.Scene {
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-        this.f8Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F8);
-        this.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.F8);
 
         this.onSpaceDown = () => this.tryInteract();
         this.onEnterDown = () => {
             if (!this.dialogue.isActive) {
                 this.tryInteract();
-            }
-        };
-        this.onF8Down = () => this.toggleDevQuizLock();
-        this.onWindowKeyDown = (event) => {
-            if (event?.code === 'F8' || event?.key === 'F8') {
-                event.preventDefault?.();
-                this.toggleDevQuizLock();
             }
         };
         this.onPointerDown = (pointer) => {
@@ -124,10 +115,7 @@ export class InspectionGateScene extends Phaser.Scene {
 
         this.spaceKey.on('down', this.onSpaceDown);
         this.enterKey.on('down', this.onEnterDown);
-        this.f8Key.on('down', this.onF8Down);
-        this.input.keyboard.on('keydown-F8', this.onF8Down);
         this.input.on('pointerdown', this.onPointerDown);
-        window?.addEventListener?.('keydown', this.onWindowKeyDown);
         this.events.once('shutdown', () => this.cleanup());
 
         if (this.isDevQuizViewLocked()) {
@@ -389,6 +377,10 @@ export class InspectionGateScene extends Phaser.Scene {
         this.bottomHud?.setInteractionPrompt(GameState.get('stage4Cleared') ? '' : chapter4Data.roomPrompt);
         this.refreshHud();
         this.showDevLockIndicator('LOCK OFF');
+    }
+
+    toggleDevFreeze() {
+        this.toggleDevQuizLock();
     }
 
     showDevLockIndicator(text) {
@@ -1013,10 +1005,7 @@ export class InspectionGateScene extends Phaser.Scene {
     cleanup() {
         this.spaceKey?.off('down', this.onSpaceDown);
         this.enterKey?.off('down', this.onEnterDown);
-        this.f8Key?.off('down', this.onF8Down);
-        this.input.keyboard.off('keydown-F8', this.onF8Down);
         this.input.off('pointerdown', this.onPointerDown);
-        window?.removeEventListener?.('keydown', this.onWindowKeyDown);
         this.clearQuizOverlay();
         this.clearResultOverlay();
         this.devLockIndicator?.destroy?.();

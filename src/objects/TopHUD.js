@@ -238,8 +238,14 @@ export class TopHUD {
             return `질문 ${Math.min(current, total)} / ${total}`;
         }
         if (GameState.get('currentChapter') === 5) {
-            if (GameState.get('stage5Cleared')) {
+            if (GameState.get('stage5PimsRegistered') || GameState.get('stage5Cleared')) {
                 return '완료';
+            }
+            if (GameState.get('stage5PimsReady')) {
+                return '등록 대기';
+            }
+            if (GameState.get('stage5QuizCompleted')) {
+                return '퀴즈 완료';
             }
             if (!GameState.get('isMiniGameActive')) {
                 return '대기';

@@ -11,24 +11,25 @@ import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js'
 import { CENTER_X, DIALOG_TOP, GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const TYPE_ORDER = ['approval', 'notification', 'etc'];
+const DEV_STAGE5_VIEW_KEY = 'pims_world.dev.stage5_view';
+const DEV_STAGE5_LOCK_KEY = 'pims_world.dev.stage5_lock';
+const DEV_STAGE5_VIEW_DEFAULT = false;
 
 const LAYOUT = {
     top: {
-        titleX: CENTER_X,
-        titleY: 34,
         warningX: CENTER_X,
-        warningY: 66,
+        warningY: 143,
         progressX: 1040,
         progressY: 34,
         hpX: 1160,
         hpY: 66
     },
-    caseCard: { x: 50, y: 114, width: 360, height: 360 },
-    typePanel: { x: 440, y: 114, width: 280, height: 360 },
-    attachmentPanel: { x: 750, y: 114, width: 480, height: 360 },
-    feedbackPanel: { x: 50, y: 520, width: 840, height: 90 },
-    nextButton: { x: 960, y: 545, width: 180, height: 60 },
-    resetButton: { x: 1150, y: 545, width: 140, height: 60 }
+    caseCard: { x: 156, y: 230, width: 310, height: 270 },
+    typePanel: { x: 500, y: 230, width: 280, height: 270 },
+    attachmentPanel: { x: 810, y: 230, width: 310, height: 270 },
+    feedbackPanel: { x: 150, y: 530, width: 630, height: 120 },
+    nextButton: { x: 873, y: 588, width: 150, height: 70 },
+    resetButton: { x: 1053, y: 588, width: 150, height: 70 }
 };
 
 const arraysEqualAsSet = (a, b) => {
@@ -62,7 +63,9 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.typeButtons = [];
         this.attachmentNodes = [];
         this.warningPulseTween = null;
+        this.pimsReadyTween = null;
         this.trapTweens = [];
+        this.devFreezeIndicator = null;
         this.currentCaseIndex = 0;
         this.selectedChangeType = null;
         this.shownAttachmentList = [];
@@ -70,6 +73,9 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.isAnswerLocked = false;
         this.isMiniGameActive = false;
         this.villainEventTriggered = false;
+        this.stage5QuizCompleted = false;
+        this.stage5PimsReady = false;
+        this.stage5PimsRegistered = false;
         this.stage5Cleared = false;
         this.hp = 100;
         this.mistakeCount = 0;
@@ -78,20 +84,125 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.caseDescriptionText = null;
         this.caseNoteText = null;
         this.caseMetaText = null;
-        this.typePanelTitle = null;
-        this.attachmentTitleText = null;
+        this.attachmentNoticeBg = null;
         this.attachmentBody = null;
         this.feedbackText = null;
-        this.headerTitleText = null;
         this.headerWarningText = null;
         this.headerProgressText = null;
         this.headerHpText = null;
         this.warningPulseText = null;
         this.nextButton = null;
         this.resetButton = null;
+        this.pimsTerminalObject = null;
         this.onSpaceDown = null;
         this.onEnterDown = null;
         this.onPointerDown = null;
+    }
+
+    isDevFreezeLocked() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return false;
+        }
+
+        try {
+            const raw = window.sessionStorage.getItem(DEV_STAGE5_LOCK_KEY);
+            if (raw === null) {
+                return DEV_STAGE5_VIEW_DEFAULT;
+            }
+            return raw === '1';
+        } catch {
+            return DEV_STAGE5_VIEW_DEFAULT;
+        }
+    }
+
+    getDevFreezeView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return null;
+        }
+
+        try {
+            const raw = window.sessionStorage.getItem(DEV_STAGE5_VIEW_KEY);
+            if (!raw) {
+                return null;
+            }
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    }
+
+    saveDevFreezeView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem(DEV_STAGE5_VIEW_KEY, JSON.stringify({
+                currentCaseIndex: this.currentCaseIndex,
+                selectedChangeType: this.selectedChangeType,
+                shownAttachmentList: this.shownAttachmentList,
+                feedbackMessage: this.feedbackMessage,
+                isAnswerLocked: this.isAnswerLocked,
+                isMiniGameActive: this.isMiniGameActive,
+                mode: this.mode,
+                villainEventTriggered: this.villainEventTriggered,
+                processedCount: this.processedCount,
+                mistakeCount: this.mistakeCount,
+                stage5Cleared: this.stage5Cleared,
+                stage5QuizCompleted: this.stage5QuizCompleted,
+                stage5PimsReady: this.stage5PimsReady,
+                stage5PimsRegistered: this.stage5PimsRegistered
+            }));
+        } catch {
+            // Ignore storage failures in dev.
+        }
+    }
+
+    clearDevFreezeView() {
+        if (!import.meta.env.DEV || typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            window.sessionStorage.removeItem(DEV_STAGE5_VIEW_KEY);
+        } catch {
+            // Ignore storage failures in dev.
+        }
+    }
+
+    restoreDevFreezeView() {
+        const saved = this.getDevFreezeView();
+        if (!saved) {
+            return;
+        }
+
+        this.currentCaseIndex = Phaser.Math.Clamp(saved.currentCaseIndex ?? 0, 0, chapter5Data.changeCases.length - 1);
+        this.selectedChangeType = saved.selectedChangeType ?? null;
+        this.shownAttachmentList = Array.isArray(saved.shownAttachmentList) ? [...saved.shownAttachmentList] : [];
+        this.feedbackMessage = saved.feedbackMessage ?? '';
+        this.isAnswerLocked = Boolean(saved.isAnswerLocked);
+        this.isMiniGameActive = Boolean(saved.isMiniGameActive);
+        this.villainEventTriggered = Boolean(saved.villainEventTriggered);
+        this.processedCount = Number.isFinite(saved.processedCount) ? saved.processedCount : 0;
+        this.mistakeCount = Number.isFinite(saved.mistakeCount) ? saved.mistakeCount : 0;
+        this.stage5Cleared = Boolean(saved.stage5Cleared);
+        this.stage5QuizCompleted = Boolean(saved.stage5QuizCompleted);
+        this.stage5PimsReady = Boolean(saved.stage5PimsReady);
+        this.stage5PimsRegistered = Boolean(saved.stage5PimsRegistered);
+
+        GameState.set('currentCaseIndex', this.currentCaseIndex);
+        GameState.set('selectedChangeType', this.selectedChangeType);
+        GameState.set('shownAttachmentList', [...this.shownAttachmentList]);
+        GameState.set('feedbackMessage', this.feedbackMessage);
+        GameState.set('isAnswerLocked', this.isAnswerLocked);
+        GameState.set('isMiniGameActive', this.isMiniGameActive);
+        GameState.set('villainEventTriggered', this.villainEventTriggered);
+        GameState.set('processedCount', this.processedCount);
+        GameState.set('mistakeCount', this.mistakeCount);
+        GameState.set('stage5Cleared', this.stage5Cleared);
+        GameState.set('stage5QuizCompleted', this.stage5QuizCompleted);
+        GameState.set('stage5PimsReady', this.stage5PimsReady);
+        GameState.set('stage5PimsRegistered', this.stage5PimsRegistered);
     }
 
     create() {
@@ -106,6 +217,9 @@ export class TransformationRoomScene extends Phaser.Scene {
         GameState.set('villainEventTriggered', false);
         GameState.set('feedbackMessage', '');
         GameState.set('isMiniGameActive', false);
+        GameState.set('stage5QuizCompleted', false);
+        GameState.set('stage5PimsReady', false);
+        GameState.set('stage5PimsRegistered', false);
         GameState.set('stage5Cleared', false);
         GameState.set('stage5BriefingDone', false);
         this.hp = GameState.get('hp') ?? 100;
@@ -143,7 +257,24 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.input.on('pointerdown', this.onPointerDown);
         this.events.once('shutdown', () => this.cleanup());
 
-        this.time.delayedCall(220, () => this.playBriefing());
+        if (this.isDevFreezeLocked()) {
+            this.mode = 'package';
+            this.isMiniGameActive = true;
+            GameState.set('isMiniGameActive', true);
+            this.bottomHud.container?.setVisible(false);
+            this.bottomHud.setInteractionVisible(false);
+            this.buildMiniGameOverlay();
+            this.restoreDevFreezeView();
+            this.showCase(this.currentCaseIndex);
+            this.renderAttachmentPanel();
+            this.renderFeedback(this.feedbackMessage, Boolean(this.feedbackMessage));
+            this.renderHeader();
+            this.refreshStage5TerminalState();
+            this.scene.pause();
+        } else {
+            this.time.delayedCall(220, () => this.playBriefing());
+        }
+
         this.refreshHud();
     }
 
@@ -198,10 +329,23 @@ export class TransformationRoomScene extends Phaser.Scene {
                 y: chapter5Data.roomInteractable.y,
                 width: chapter5Data.roomInteractable.width,
                 height: chapter5Data.roomInteractable.height,
-                color: 0x7a5cff,
+                hideBorder: true,
                 animated: false
-            }, () => this.handleInteraction('changePackage'))
+            }, () => this.handleInteraction('changePackage')),
+            new InteractableObject(this, {
+                id: 'terminal',
+                name: 'PIMS 단말기',
+                prompt: '먼저 변경유형 판정이 필요합니다.',
+                x: 1188,
+                y: 420,
+                width: 118,
+                height: 146,
+                hideBorder: true,
+                animated: false
+            }, () => this.handleInteraction('terminal'))
         ];
+
+        this.pimsTerminalObject = this.interactables.find((item) => item.id === 'terminal') || null;
 
         this.interaction = new InteractionManager(
             this,
@@ -209,6 +353,7 @@ export class TransformationRoomScene extends Phaser.Scene {
             this.interactables,
             (prompt) => this.bottomHud.setInteractionPrompt(prompt)
         );
+        this.refreshStage5TerminalState();
     }
 
     playBriefing() {
@@ -228,6 +373,7 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.interactables.forEach((item) => item.update?.());
         this.interaction.update(blocked);
         this.refreshHud();
+        this.refreshStage5TerminalState();
 
         if (blocked) {
             this.player.setMovement(0, 0);
@@ -292,16 +438,29 @@ export class TransformationRoomScene extends Phaser.Scene {
         }
 
         if (id === 'changePackage') {
-            if (this.stage5Cleared) {
-                this.dialogue.say([{ speaker: 'KCA 간사', text: '이미 변경유형 판정을 마쳤습니다.' }]);
+            if (this.isStage5PimsRegistered()) {
+                this.dialogue.say([{ speaker: 'KCA 간사', text: 'PIMS 변경정보 등록까지 이미 완료했습니다.' }]);
+                return;
+            }
+
+            if (this.stage5QuizCompleted) {
+                this.dialogue.say([{ speaker: 'KCA 간사', text: '변경유형 판정은 끝났습니다. 이제 PIMS 단말기에서 등록하세요.' }]);
                 return;
             }
             this.openMiniGame();
+            return;
+        }
+
+        if (id === 'terminal') {
+            this.handlePimsTerminalInteraction();
         }
     }
 
     openMiniGame() {
-        if (this.isMiniGameActive || this.stage5Cleared) {
+        if (this.isMiniGameActive || this.stage5QuizCompleted || this.isStage5PimsRegistered()) {
+            if (this.stage5QuizCompleted && !this.isStage5PimsRegistered()) {
+                this.dialogue.say([{ speaker: 'KCA 간사', text: '이제 PIMS 단말기에서 변경정보를 등록하세요.' }]);
+            }
             return;
         }
 
@@ -312,6 +471,20 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.bottomHud?.setInteractionVisible(false);
         this.buildMiniGameOverlay();
         this.showCase(this.currentCaseIndex);
+    }
+
+    handlePimsTerminalInteraction() {
+        if (this.isStage5PimsRegistered()) {
+            this.dialogue.say([{ speaker: 'KCA 간사', text: 'PIMS 변경정보 등록은 이미 완료되었습니다.' }]);
+            return;
+        }
+
+        if (!this.stage5QuizCompleted || !this.stage5PimsReady) {
+            this.dialogue.say([{ speaker: 'KCA 간사', text: '먼저 변경의 거울에서 변경유형을 판정해야 합니다.' }]);
+            return;
+        }
+
+        this.registerStage5Pims();
     }
 
     buildMiniGameOverlay() {
@@ -327,13 +500,6 @@ export class TransformationRoomScene extends Phaser.Scene {
                 .setOrigin(0.5)
             : this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02030a, 0.5)
                 .setOrigin(0.5);
-        const title = this.add.text(LAYOUT.top.titleX, LAYOUT.top.titleY, '변경유형 판정', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '28px',
-            color: '#fff5c7',
-            stroke: '#34145c',
-            strokeThickness: 4
-        }).setOrigin(0.5);
         const warning = this.add.text(LAYOUT.top.warningX, LAYOUT.top.warningY, chapter5Data.warningText, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
@@ -356,67 +522,55 @@ export class TransformationRoomScene extends Phaser.Scene {
             padding: { left: 8, right: 8, top: 3, bottom: 3 }
         }).setOrigin(1, 0);
 
-        const caseCardBg = this.add.rectangle(LAYOUT.caseCard.x, LAYOUT.caseCard.y, LAYOUT.caseCard.width, LAYOUT.caseCard.height, 0x11172a, 0.94)
-            .setOrigin(0, 0)
-            .setStrokeStyle(2, 0xffd36e, 0.58);
         this.caseTitleText = this.add.text(LAYOUT.caseCard.x + 18, LAYOUT.caseCard.y + 18, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '22px',
-            color: '#fff5c7'
+            color: '#3d235f',
+            wordWrap: { width: 274 }
         });
         this.caseDescriptionText = this.add.text(LAYOUT.caseCard.x + 18, LAYOUT.caseCard.y + 66, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
-            color: '#f8f3ff',
-            wordWrap: { width: 320 },
+            color: '#2c2c2c',
+            wordWrap: { width: 274 },
             lineSpacing: 8
         });
         this.caseNoteText = this.add.text(LAYOUT.caseCard.x + 18, LAYOUT.caseCard.y + 196, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '15px',
-            color: '#c9ffef',
-            wordWrap: { width: 320 },
+            color: '#4f5d4f',
+            wordWrap: { width: 274 },
             lineSpacing: 6
         });
         this.caseMetaText = this.add.text(LAYOUT.caseCard.x + 18, LAYOUT.caseCard.y + 308, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '14px',
-            color: '#ffd36e'
+            color: '#7a5b1f',
+            wordWrap: { width: 274 }
         });
 
-        const typePanelBg = this.add.rectangle(LAYOUT.typePanel.x, LAYOUT.typePanel.y, LAYOUT.typePanel.width, LAYOUT.typePanel.height, 0x11172a, 0.94)
-            .setOrigin(0, 0)
-            .setStrokeStyle(2, 0x75f6ff, 0.58);
-        this.typePanelTitle = this.add.text(LAYOUT.typePanel.x + 18, LAYOUT.typePanel.y + 18, '변경유형', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '22px',
-            color: '#fff5c7'
-        });
+        this.attachmentNoticeBg = this.add.rectangle(
+            LAYOUT.attachmentPanel.x,
+            LAYOUT.attachmentPanel.y,
+            LAYOUT.attachmentPanel.width,
+            LAYOUT.attachmentPanel.height,
+            0x111111,
+            0.58
+        ).setOrigin(0, 0);
 
-        const attachmentPanelBg = this.add.rectangle(LAYOUT.attachmentPanel.x, LAYOUT.attachmentPanel.y, LAYOUT.attachmentPanel.width, LAYOUT.attachmentPanel.height, 0x11172a, 0.94)
-            .setOrigin(0, 0)
-            .setStrokeStyle(2, 0x75f6ff, 0.58);
-        this.attachmentTitleText = this.add.text(LAYOUT.attachmentPanel.x + 18, LAYOUT.attachmentPanel.y + 18, '첨부서류', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '22px',
-            color: '#fff5c7'
-        });
-        this.attachmentBody = this.add.text(LAYOUT.attachmentPanel.x + 18, LAYOUT.attachmentPanel.y + 64, '', {
+        this.attachmentBody = this.add.text(LAYOUT.attachmentPanel.x + 18, LAYOUT.attachmentPanel.y + 20, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
             color: '#f8f3ff',
-            wordWrap: { width: 430 },
+            wordWrap: { width: LAYOUT.attachmentPanel.width - 36 },
             lineSpacing: 8
         });
 
-        const feedbackBg = this.add.rectangle(LAYOUT.feedbackPanel.x, LAYOUT.feedbackPanel.y, LAYOUT.feedbackPanel.width, LAYOUT.feedbackPanel.height, 0x05050a, 0.28)
-            .setOrigin(0, 0)
-            .setStrokeStyle(0, 0x000000, 0);
         this.feedbackText = this.add.text(LAYOUT.feedbackPanel.x + 18, LAYOUT.feedbackPanel.y + 12, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
-            color: '#f8f3ff',
-            wordWrap: { width: 810 },
+            color: '#111111',
+            wordWrap: { width: LAYOUT.feedbackPanel.width - 36 },
             lineSpacing: 6
         });
 
@@ -431,28 +585,21 @@ export class TransformationRoomScene extends Phaser.Scene {
         }).setOrigin(0.5).setVisible(false);
         this.packageOverlay.add([
             backdrop,
-            title,
             warning,
             progress,
             hp,
-            caseCardBg,
             this.caseTitleText,
             this.caseDescriptionText,
             this.caseNoteText,
             this.caseMetaText,
-            typePanelBg,
-            this.typePanelTitle,
-            attachmentPanelBg,
-            this.attachmentTitleText,
+            this.attachmentNoticeBg,
             this.attachmentBody,
-            feedbackBg,
             this.feedbackText,
             this.nextButton.container,
             this.resetButton.container,
             this.warningPulseText
         ].filter(Boolean));
 
-        this.headerTitleText = title;
         this.headerWarningText = warning;
         this.headerProgressText = progress;
         this.headerHpText = hp;
@@ -462,13 +609,6 @@ export class TransformationRoomScene extends Phaser.Scene {
 
     createSimpleButton(x, y, width, height, label, onClick) {
         const container = this.add.container(0, 0);
-        const bg = this.add.rectangle(x, y, width, height, 0x24183f, 0.96)
-            .setStrokeStyle(2, 0x75f6ff, 0.72)
-            .setOrigin(0.5);
-        const hover = this.add.rectangle(x, y, width, height, 0x3a2860, 0.96)
-            .setStrokeStyle(2, 0xffd36e, 0.86)
-            .setOrigin(0.5)
-            .setVisible(false);
         const text = this.add.text(x, y, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '16px',
@@ -480,12 +620,12 @@ export class TransformationRoomScene extends Phaser.Scene {
             if (!enabled) {
                 return;
             }
-            bg.setVisible(false);
-            hover.setVisible(true);
+            text.setColor('#fff5c7');
+            text.setScale(1.03);
         });
         hit.on('pointerout', () => {
-            bg.setVisible(true);
-            hover.setVisible(false);
+            text.setColor('#f8f3ff');
+            text.setScale(1);
         });
         hit.on('pointerdown', (pointer, localX, localY, event) => {
             event?.stopPropagation?.();
@@ -494,11 +634,9 @@ export class TransformationRoomScene extends Phaser.Scene {
             }
             onClick?.();
         });
-        container.add([bg, hover, text, hit]);
+        container.add([text, hit]);
         return {
             container,
-            bg,
-            hover,
             text,
             hit,
             setEnabled: (value) => {
@@ -506,8 +644,8 @@ export class TransformationRoomScene extends Phaser.Scene {
                 container.setAlpha(enabled ? 1 : 0.55);
                 hit.input.enabled = enabled;
                 if (!enabled) {
-                    bg.setVisible(true);
-                    hover.setVisible(false);
+                    text.setColor('#b9b9b9');
+                    text.setScale(1);
                 }
             }
         };
@@ -515,7 +653,6 @@ export class TransformationRoomScene extends Phaser.Scene {
 
     renderHeader() {
         const total = chapter5Data.changeCases.length;
-        this.headerTitleText?.setText('변경유형 판정');
         this.headerWarningText?.setText(this.villainEventTriggered ? '11월 30일 지나면 협약변경 안됩니다!' : chapter5Data.warningText);
         this.headerProgressText?.setText(`변경사항 ${Math.min(this.currentCaseIndex + 1, total)} / ${total}`);
         this.headerHpText?.setText(`HP: ${GameState.get('hp') ?? this.hp}`);
@@ -566,8 +703,8 @@ export class TransformationRoomScene extends Phaser.Scene {
 
         TYPE_ORDER.forEach((type, index) => {
             const meta = changeTypeMeta[type];
-            const x = LAYOUT.typePanel.x + 140;
-            const y = LAYOUT.typePanel.y + 82 + index * 86;
+            const x = LAYOUT.typePanel.x + 138;
+            const y = LAYOUT.typePanel.y + 47 + index * 81;
             const button = this.createTypeButton(x, y, type, meta.label, meta.subLabel);
             this.typeButtons.push(button);
             this.packageOverlay.add(button.container);
@@ -576,16 +713,12 @@ export class TransformationRoomScene extends Phaser.Scene {
     }
 
     createTypeButton(x, y, type, label, subLabel) {
-        const width = 224;
-        const height = 66;
+        const width = 245;
+        const height = 62;
         const container = this.add.container(0, 0);
         const isSelected = this.selectedChangeType === type;
-        const bg = this.add.rectangle(x, y, width, height, isSelected ? 0x322159 : 0x1a1f35, 0.96)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, isSelected ? 0xffd36e : 0x75f6ff, isSelected ? 0.92 : 0.6);
-        const glow = this.add.rectangle(x, y, width + 10, height + 10, 0xffd36e, 0.22)
-            .setOrigin(0.5)
-            .setVisible(false);
+        const background = this.add.rectangle(x, y, width, height, 0x000000, isSelected ? 0.5 : 0.28);
+        background.setStrokeStyle(2, isSelected ? 0xffd36e : 0x000000, isSelected ? 0.65 : 0.18);
         const text = this.add.text(x, y - 10, label, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
@@ -600,28 +733,56 @@ export class TransformationRoomScene extends Phaser.Scene {
 
         hit.on('pointerdown', (pointer, localX, localY, event) => {
             event?.stopPropagation?.();
+            background.setFillStyle(0x000000, 0.72);
+            background.setStrokeStyle(2, 0xfff5c7, 0.95);
+            this.tweens.add({
+                targets: [background, text, sub],
+                scaleX: { from: 1, to: 1.04 },
+                scaleY: { from: 1, to: 1.04 },
+                duration: 120,
+                yoyo: true,
+                ease: 'Sine.easeOut'
+            });
             this.selectChangeType(type);
         });
 
-        container.add([glow, bg, text, sub, hit]);
+        hit.on('pointerover', () => {
+            if (this.selectedChangeType === type) {
+                background.setFillStyle(0x000000, 0.62);
+                background.setStrokeStyle(2, 0xffe7a8, 0.95);
+                text.setColor('#fff6cf');
+                sub.setColor('#fff0b6');
+                return;
+            }
+            background.setFillStyle(0x000000, 0.46);
+            background.setStrokeStyle(2, 0xc9ffef, 0.55);
+            text.setColor('#fff5c7');
+            sub.setColor('#ffd36e');
+            text.setScale(1.02);
+            sub.setScale(1.02);
+        });
 
-        const button = { container, glow, bg, text, sub, hit, type, trapTween: null };
+        hit.on('pointerout', () => {
+            const selected = this.selectedChangeType === type;
+            background.setFillStyle(0x000000, selected ? 0.5 : 0.28);
+            background.setStrokeStyle(2, selected ? 0xffd36e : 0x000000, selected ? 0.65 : 0.18);
+            text.setColor('#f8f3ff');
+            sub.setColor(selected ? '#fff5c7' : '#c9ffef');
+            text.setScale(1);
+            sub.setScale(1);
+        });
+
+        container.add([background, text, sub, hit]);
+
+        const button = { container, background, text, sub, hit, type, trapTween: null };
         const currentCase = this.getCurrentCase();
-        if (this.villainEventTriggered && currentCase?.trapType === type) {
-            button.glow.setVisible(true);
+        const glowType = this.getGlowType(currentCase);
+        if (glowType === type) {
             button.trapTween = this.tweens.add({
-                targets: button.glow,
-                alpha: { from: 0.28, to: 1 },
+                targets: [button.background, button.text, button.sub],
+                alpha: { from: 0.45, to: 1 },
                 scaleX: { from: 1, to: 1.08 },
                 scaleY: { from: 1, to: 1.08 },
-                duration: 360,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
-            this.tweens.add({
-                targets: [button.bg, button.text, button.sub],
-                alpha: { from: 0.82, to: 1 },
                 duration: 360,
                 yoyo: true,
                 repeat: -1,
@@ -630,6 +791,21 @@ export class TransformationRoomScene extends Phaser.Scene {
         }
 
         return button;
+    }
+
+    getGlowType(currentCase) {
+        if (!this.villainEventTriggered || !currentCase) {
+            return null;
+        }
+
+        const correctSlot = ((this.currentCaseIndex + this.processedCount) % 4) === 0;
+        if (correctSlot) {
+            return currentCase.correctType;
+        }
+        if (currentCase.trapType) {
+            return currentCase.trapType;
+        }
+        return TYPE_ORDER.find((type) => type !== currentCase.correctType) || null;
     }
 
     renderAttachmentPanel() {
@@ -642,32 +818,28 @@ export class TransformationRoomScene extends Phaser.Scene {
         }
 
         if (!this.shownAttachmentList.length) {
+            this.attachmentNoticeBg?.setVisible(true);
+            this.attachmentBody?.setColor('#f8f3ff');
             this.attachmentBody?.setText('유형을 선택하면 필요한 첨부서류가 표시됩니다.');
             return;
         }
 
+        this.attachmentNoticeBg?.setVisible(false);
+        this.attachmentBody?.setColor('#000000');
         this.attachmentBody?.setText('');
         const startX = LAYOUT.attachmentPanel.x + 18;
-        const startY = LAYOUT.attachmentPanel.y + 62;
-        const rowHeight = 46;
+        const startY = LAYOUT.attachmentPanel.y + 20;
+        const rowHeight = 47;
 
         this.shownAttachmentList.forEach((label, index) => {
             const row = this.add.container(0, 0);
-            const y = startY + index * (rowHeight + 8);
-            const bg = this.add.rectangle(startX + 220, y + 18, 430, rowHeight, 0x161b2f, 0.92)
-                .setOrigin(0.5)
-                .setStrokeStyle(1, 0x75f6ff, 0.34);
-            const icon = this.add.text(startX + 8, y + 18, '✓', {
-                fontFamily: 'GALMURI, Arial, sans-serif',
-                fontSize: '18px',
-                color: '#ffd36e'
-            }).setOrigin(0, 0.5);
+            const y = startY - 3 + index * (rowHeight + 4);
             const text = this.add.text(startX + 34, y + 18, label, {
                 fontFamily: 'GALMURI, Arial, sans-serif',
                 fontSize: '15px',
-                color: '#f8f3ff'
-            }).setOrigin(0, 0.5);
-            row.add([bg, icon, text]);
+                color: '#31204f'
+            }).setOrigin(0, 0.5).setWordWrapWidth(LAYOUT.attachmentPanel.width - 90, true);
+            row.add([text]);
             row.setAlpha(0);
             this.packageOverlay.add(row);
             this.attachmentNodes.push(row);
@@ -806,7 +978,7 @@ export class TransformationRoomScene extends Phaser.Scene {
         }
 
         this.feedbackText.setText(this.feedbackMessage || '');
-        this.feedbackText.setColor(isWarning ? '#fff0c4' : '#f8f3ff');
+        this.feedbackText.setColor(isWarning ? '#000000' : '#111111');
     }
 
     resetCurrentSelection() {
@@ -852,9 +1024,13 @@ export class TransformationRoomScene extends Phaser.Scene {
     }
 
     completeMiniGame() {
-        this.stage5Cleared = true;
+        this.stage5QuizCompleted = true;
+        this.stage5PimsReady = true;
+        this.stage5PimsRegistered = false;
         this.isMiniGameActive = false;
-        GameState.set('stage5Cleared', true);
+        GameState.set('stage5QuizCompleted', true);
+        GameState.set('stage5PimsReady', true);
+        GameState.set('stage5PimsRegistered', false);
         GameState.set('isMiniGameActive', false);
         this.mode = 'field';
         this.packageOverlay?.destroy(true);
@@ -862,16 +1038,140 @@ export class TransformationRoomScene extends Phaser.Scene {
         this.topHud?.container?.setVisible(true);
         this.bottomHud?.container?.setVisible(true);
         this.bottomHud?.setInteractionVisible(true);
-        this.bottomHud?.setInteractionPrompt('변경유형 판정 완료');
-        this.renderFeedback('변경유형 판정 완료!\n승인사항, 통보사항, 기타사항을 구분하고 필요한 첨부서류와 PIMS 정보수정까지 확인했습니다.', true);
+        this.refreshStage5TerminalState();
+        this.bottomHud?.setInteractionPrompt('SPACE : PIMS 변경정보 등록');
+        this.renderFeedback('변경유형 판정 완료!\n이제 PIMS 단말기에서 변경정보를 등록하세요.', true);
         this.dialogue.say([
-            { speaker: 'KCA 간사', text: '좋습니다. 변경 유형, 첨부서류, PIMS 정보수정까지 확인했습니다.' },
-            { speaker: 'KCA 간사', text: '이제 다음 단계로 넘어가시죠.' }
+            { speaker: 'KCA 간사', text: '좋습니다. 이제 변경된 정보를 PIMS에 등록해야 합니다.' }
         ]);
+    }
+
+    registerStage5Pims() {
+        if (this.isStage5PimsRegistered()) {
+            this.dialogue.say([{ speaker: 'KCA 간사', text: 'PIMS 변경정보 등록은 이미 완료되었습니다.' }]);
+            return;
+        }
+
+        this.stage5PimsRegistered = true;
+        this.stage5PimsReady = false;
+        this.stage5Cleared = true;
+        GameState.set('stage5PimsRegistered', true);
+        GameState.set('stage5PimsReady', false);
+        GameState.set('stage5Cleared', true);
+        this.refreshStage5TerminalState();
+        this.bottomHud?.setInteractionPrompt('PIMS 변경정보 등록 완료');
+        this.renderFeedback('PIMS 변경정보 등록 완료!\n변경된 내용이 시스템에도 반영되었습니다.', true);
+        this.dialogue.say([
+            { speaker: 'KCA 간사', text: '변경유형과 첨부서류, PIMS 정보수정까지 확인했습니다. 이제 다음 단계로 이동합니다.' }
+        ], () => {
+            this.time.delayedCall(1000, () => this.goToStage6());
+        });
+    }
+
+    refreshStage5TerminalState() {
+        if (!this.pimsTerminalObject) {
+            return;
+        }
+
+        const ready = Boolean(this.stage5PimsReady);
+        const registered = this.isStage5PimsRegistered();
+        const labelColor = registered ? '#c9ffef' : (ready ? '#fff5c7' : '#f8f3ff');
+        const prompt = registered
+            ? 'PIMS 변경정보 등록 완료'
+            : (ready ? 'SPACE : PIMS 변경정보 등록' : '먼저 변경유형 판정이 필요합니다.');
+
+        this.pimsTerminalObject.prompt = prompt;
+        this.pimsTerminalObject.label?.setColor(labelColor);
+        this.pimsTerminalObject.image?.setAlpha(registered ? 0.95 : (ready ? 1 : 0.82));
+        if (this.pimsTerminalObject.image?.setTint) {
+            if (registered) {
+                this.pimsTerminalObject.image.setTint(0xc9ffef);
+            } else if (ready) {
+                this.pimsTerminalObject.image.setTint(0xfff5c7);
+            } else {
+                this.pimsTerminalObject.image.clearTint?.();
+            }
+        }
+
+        if (ready && !registered) {
+            if (!this.pimsReadyTween && this.pimsTerminalObject.image) {
+                this.pimsReadyTween = this.tweens.add({
+                    targets: this.pimsTerminalObject.image,
+                    alpha: { from: 0.82, to: 1 },
+                    scaleX: { from: 1, to: 1.04 },
+                    scaleY: { from: 1, to: 1.04 },
+                    duration: 420,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+            this.pimsTerminalObject.mark?.setVisible?.(true);
+            return;
+        }
+
+        this.pimsReadyTween?.stop?.();
+        this.pimsReadyTween = null;
+        this.pimsTerminalObject.mark?.setVisible?.(false);
+    }
+
+    goToStage6() {
+        GameState.set('currentChapter', 6);
+        GameState.set('stage5QuizCompleted', true);
+        GameState.set('stage5PimsReady', false);
+        GameState.set('stage5PimsRegistered', true);
+        const nextScene = this.scene.manager?.keys?.Chapter6Scene ? 'Chapter6Scene' : (this.scene.manager?.keys?.Stage6Scene ? 'Stage6Scene' : null);
+        if (nextScene) {
+            this.scene.start(nextScene);
+            return;
+        }
+
+        this.bottomHud?.setInteractionPrompt('6단계 준비 완료');
+    }
+
+    isStage5PimsRegistered() {
+        return Boolean(this.stage5PimsRegistered && this.stage5Cleared);
     }
 
     showVillainSpeech(text) {
         this.renderFeedback(text, true);
+    }
+
+    toggleDevFreeze() {
+        if (!import.meta.env.DEV) {
+            return;
+        }
+
+        const nextLocked = !this.isDevFreezeLocked();
+        try {
+            window.sessionStorage.setItem(DEV_STAGE5_LOCK_KEY, nextLocked ? '1' : '0');
+        } catch {
+            // Ignore storage failures in dev.
+        }
+
+        if (nextLocked) {
+            this.saveDevFreezeView();
+            this.devFreezeIndicator?.destroy?.();
+            this.devFreezeIndicator = this.add.text(GAME_WIDTH - 24, 24, 'LOCK ON', {
+                fontFamily: 'GALMURI, Arial, sans-serif',
+                fontSize: '16px',
+                color: '#fff5c7',
+                backgroundColor: 'rgba(7, 10, 20, 0.82)',
+                padding: { left: 10, right: 10, top: 6, bottom: 6 }
+            })
+                .setOrigin(1, 0)
+                .setScrollFactor(0)
+                .setDepth(2000);
+            this.scene.pause();
+            return;
+        }
+
+        this.clearDevFreezeView();
+        this.devFreezeIndicator?.destroy?.();
+        this.devFreezeIndicator = null;
+        if (this.scene.isPaused()) {
+            this.scene.resume();
+        }
     }
 
     raiseOverlayMessages() {
@@ -911,6 +1211,11 @@ export class TransformationRoomScene extends Phaser.Scene {
             }
         });
         this.warningPulseTween?.stop();
+        this.pimsReadyTween?.stop();
+        this.devFreezeIndicator?.destroy?.();
+        this.devFreezeIndicator = null;
+        this.pimsReadyTween = null;
+        this.pimsTerminalObject = null;
         this.packageOverlay?.destroy(true);
         this.packageOverlay = null;
         this.topHud?.destroy?.();

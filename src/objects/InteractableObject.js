@@ -19,6 +19,7 @@ export class InteractableObject {
         this.assistantClosedTextureKey = this.animated && this.isAssistant ? ASSETS.characters.kcaAssistantClosed.key : null;
         this.hideVisuals = Boolean(config.hideVisuals);
         this.labelOnly = Boolean(config.labelOnly);
+        this.hideBorder = Boolean(config.hideBorder);
         this.imageAlpha = typeof config.imageAlpha === 'number' ? config.imageAlpha : 1;
         setLinearTextureFilter(scene, this.textureKey);
         if (this.assistantOpenTextureKey) {
@@ -36,7 +37,7 @@ export class InteractableObject {
         const bodyColor = this.isVault ? 0x000000 : config.color;
         const bodyAlpha = this.isVault ? 0 : 1;
         this.body = scene.add.rectangle(0, 0, config.width, config.height, bodyColor, bodyAlpha)
-            .setStrokeStyle(this.isVault ? 0 : 2, this.isVault ? 0xf0dd9c : 0xffffff, this.isVault ? 0 : 0.35);
+            .setStrokeStyle(this.isVault || this.hideBorder ? 0 : 2, this.isVault ? 0xf0dd9c : 0xffffff, this.isVault || this.hideBorder ? 0 : 0.35);
         const labelOffset = this.isVault ? 20 : 10;
         const labelY = config.height / 2 + labelOffset;
         const labelBackgroundColor = config.labelBackgroundColor ?? 'rgba(18, 12, 34, 0.45)';

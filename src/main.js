@@ -50,6 +50,56 @@ const config = {
     ]
 };
 
+const installDevFreezeHandler = () => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    if (window.__pimsWorldDevFreezeHandlerInstalled) {
+        return;
+    }
+    window.__pimsWorldDevFreezeHandlerInstalled = true;
+
+    const handleFreezeToggle = (event) => {
+        if (event?.code !== 'F8' && event?.key !== 'F8') {
+            return;
+        }
+
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        event.stopImmediatePropagation?.();
+
+        const game = window.__pimsWorldGame;
+        const scenes = game?.scene?.scenes || [];
+        const activeScenes = scenes.filter((scene) => scene?.scene?.isActive?.() || scene?.scene?.isPaused?.());
+        const scene = activeScenes[activeScenes.length - 1] || scenes[scenes.length - 1] || null;
+        if (!scene) {
+            return;
+        }
+
+        if (typeof scene.toggleDevFreeze === 'function') {
+            scene.toggleDevFreeze();
+            return;
+        }
+
+        if (typeof scene.toggleDevQuizLock === 'function') {
+            scene.toggleDevQuizLock();
+            return;
+        }
+
+        if (scene.scene?.isPaused?.()) {
+            scene.scene.resume();
+        } else {
+            scene.scene.pause();
+        }
+    };
+
+    window.addEventListener('keydown', handleFreezeToggle, true);
+};
+
+installDevFreezeHandler();
+
 window.addEventListener('load', () => {
-    new Phaser.Game(config);
+    const game = new Phaser.Game(config);
+    window.__pimsWorldGame = game;
 });

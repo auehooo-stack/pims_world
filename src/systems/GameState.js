@@ -70,6 +70,9 @@ export const initialGameState = {
     feedbackMessage: '',
     isMiniGameActive: false,
     stage5BriefingDone: false,
+    stage5QuizCompleted: false,
+    stage5PimsReady: false,
+    stage5PimsRegistered: false,
     stage5Cleared: false,
     savedPlayerPosition: null
 };
@@ -132,8 +135,11 @@ export const GameState = {
         }
 
         if (this.get('currentChapter') === 5) {
-            if (this.get('stage5Cleared')) {
-                return '변경유형 판정을 마쳤습니다.';
+            if (this.get('stage5PimsRegistered') || this.get('stage5Cleared')) {
+                return 'PIMS 변경정보 등록을 마쳤습니다.';
+            }
+            if (this.get('stage5PimsReady')) {
+                return 'PIMS 단말기에서 변경정보를 등록하세요.';
             }
             if (!this.get('isMiniGameActive')) {
                 return '협약변경의 방에서 변경유형을 판정하세요.';
