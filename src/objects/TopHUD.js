@@ -254,6 +254,26 @@ export class TopHUD {
             const total = 6;
             return `패키지 ${Math.min(current, total)} / ${total}`;
         }
+        if (GameState.get('currentChapter') === 6) {
+            if (GameState.get('stage6PimsRegistered')) {
+                return '완료';
+            }
+            if (GameState.get('stage6GemCollected')) {
+                return '등록';
+            }
+            if (GameState.get('stage6QuizCompleted')) {
+                return '보석';
+            }
+            if (GameState.get('stage6QuizStarted')) {
+                const current = Number(GameState.get('stage6CurrentQuestionIndex') || 0) + 1;
+                const total = GameState.get('stage6SelectedRoute') === 'provider' ? 6 : 3;
+                return `도장 ${Math.min(current, total)} / ${total}`;
+            }
+            if (GameState.get('stage6MailChecked')) {
+                return '제단';
+            }
+            return '공문';
+        }
         return `${GameState.get('executionRate')}%`;
     }
 

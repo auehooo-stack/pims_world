@@ -9,6 +9,8 @@ import { ExecutionHouseScene } from './scenes/ExecutionHouseScene.js';
 import { MiddleFerrisWheelScene } from './scenes/MiddleFerrisWheelScene.js';
 import { InspectionGateScene } from './scenes/InspectionGateScene.js';
 import { TransformationRoomScene } from './scenes/TransformationRoomScene.js';
+import { Stage6Scene } from './scenes/Stage6Scene.js';
+import { Stage7Scene } from './scenes/Stage7Scene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { GAME_HEIGHT, GAME_WIDTH } from './config/gameDimensions.js';
 
@@ -46,6 +48,8 @@ const config = {
         MiddleFerrisWheelScene,
         InspectionGateScene,
         TransformationRoomScene,
+        Stage6Scene,
+        Stage7Scene,
         GameOverScene
     ]
 };

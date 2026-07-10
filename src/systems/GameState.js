@@ -74,6 +74,18 @@ export const initialGameState = {
     stage5PimsReady: false,
     stage5PimsRegistered: false,
     stage5Cleared: false,
+    stage6MailChecked: false,
+    stage6AltarUnlocked: false,
+    stage6QuizStarted: false,
+    stage6QuizCompleted: false,
+    stage6GemSpawned: false,
+    stage6GemCollected: false,
+    stage6PimsRegistered: false,
+    stage6SelectedRoute: null,
+    stage6CurrentQuestionIndex: 0,
+    stage6CorrectCount: 0,
+    stage6FeedbackMessage: '',
+    stage6IsAnswerLocked: false,
     savedPlayerPosition: null
 };
 
@@ -145,6 +157,22 @@ export const GameState = {
                 return '협약변경의 방에서 변경유형을 판정하세요.';
             }
             return '변경 유형을 선택해 첨부서류를 확인하세요.';
+        }
+
+        if (this.get('currentChapter') === 6) {
+            if (this.get('stage6PimsRegistered')) {
+                return '성과조사 대응 등록을 마쳤습니다.';
+            }
+            if (this.get('stage6GemCollected')) {
+                return 'PIMS 단말기에서 성과조사 대응 결과를 등록하세요.';
+            }
+            if (this.get('stage6QuizCompleted')) {
+                return '성과 보석을 획득하세요.';
+            }
+            if (this.get('stage6MailChecked')) {
+                return '성과의 제단에서 퀴즈를 시작하세요.';
+            }
+            return '우편함에서 성과조사 협조 요청 공문을 확인하세요.';
         }
 
         if (this.get('currentChapter') === 2) {

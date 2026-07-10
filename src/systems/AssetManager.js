@@ -204,6 +204,8 @@ export const getInventoryIconKey = (id) => {
         case 'stage2Receipts':
         case 'receipt':
             return ASSETS.objects.receipt.key;
+        case 'stage6Gem':
+            return ASSETS.effects.sparkle.key;
         default:
             return null;
     }

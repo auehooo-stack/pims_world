@@ -802,10 +802,14 @@ export class TransformationRoomScene extends Phaser.Scene {
         if (correctSlot) {
             return currentCase.correctType;
         }
-        if (currentCase.trapType) {
-            return currentCase.trapType;
+
+        const wrongTypes = TYPE_ORDER.filter((type) => type !== currentCase.correctType);
+        if (!wrongTypes.length) {
+            return null;
         }
-        return TYPE_ORDER.find((type) => type !== currentCase.correctType) || null;
+
+        const offset = (this.currentCaseIndex + this.processedCount) % wrongTypes.length;
+        return wrongTypes[offset];
     }
 
     renderAttachmentPanel() {
@@ -1120,13 +1124,7 @@ export class TransformationRoomScene extends Phaser.Scene {
         GameState.set('stage5QuizCompleted', true);
         GameState.set('stage5PimsReady', false);
         GameState.set('stage5PimsRegistered', true);
-        const nextScene = this.scene.manager?.keys?.Chapter6Scene ? 'Chapter6Scene' : (this.scene.manager?.keys?.Stage6Scene ? 'Stage6Scene' : null);
-        if (nextScene) {
-            this.scene.start(nextScene);
-            return;
-        }
-
-        this.bottomHud?.setInteractionPrompt('6단계 준비 완료');
+        this.scene.start('Stage6Scene');
     }
 
     isStage5PimsRegistered() {

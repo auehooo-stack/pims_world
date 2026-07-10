@@ -255,6 +255,19 @@ export class BottomHUD {
                     count: GameState.get('stage3ReportCreated') ? 1 : 0
                 }
             ];
+        } else if (GameState.get('currentChapter') === 6) {
+            items = [
+                { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 }
+            ];
+            if (GameState.get('stage6GemCollected')) {
+                items.push({
+                    id: 'stage6Gem',
+                    label: '성과 보석',
+                    color: 0xffd36e,
+                    fontSize: '9px',
+                    count: 1
+                });
+            }
         } else {
             // TODO: add the budget coin item to inventory when stage 1 clear rewards are wired in.
             if (GameState.get('businessCostCoin')) {

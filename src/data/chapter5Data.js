@@ -11,7 +11,7 @@ export const changeTypeMeta = {
     },
     notification: {
         label: '통보사항',
-        subLabel: '변경서류와 통보'
+        subLabel: '주무부서 통보 필요'
     },
     etc: {
         label: '기타사항',
