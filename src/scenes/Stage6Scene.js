@@ -124,10 +124,6 @@ export class Stage6Scene extends Phaser.Scene {
         this.enterKey.on('down', this.onEnterDown);
         this.input.on('pointerdown', this.onPointerDown);
         this.events.once('shutdown', () => this.cleanup());
-
-        this.time.delayedCall(240, () => {
-            this.dialogue.say([{ speaker: 'KCA 간사', text: '성과조사 공문을 확인한 뒤 제단으로 가세요.' }]);
-        });
     }
 
     update() {
@@ -256,6 +252,11 @@ export class Stage6Scene extends Phaser.Scene {
     clampPlayerToWalkable() {
         const clamped = this.clampToWalkable(this.player.x, this.player.y);
         this.player.setPosition(clamped.x, clamped.y);
+    }
+
+    refreshHud() {
+        this.topHud?.refresh?.();
+        this.bottomHud?.refresh?.();
     }
 
     tryInteract() {

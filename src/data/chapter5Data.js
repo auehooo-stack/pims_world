@@ -22,7 +22,7 @@ export const changeTypeMeta = {
 export const chapter5Data = {
     title: '5단계: 협약변경의 방',
     subtitle: '변경유형 판정',
-    roomPrompt: 'Space: 변경유형 판정 열기',
+    roomPrompt: 'Space: 변경유형 판정 시작',
     packageTitle: '변경유형 판정',
     warningText: '협약변경은 11월 30일까지',
     playerStart: { x: 174, y: 486 },
@@ -36,9 +36,9 @@ export const chapter5Data = {
             correctType: 'approval',
             attachmentList: [
                 '승인요청공문',
-                '주무부서 승인공문',
                 '변경수행계획서',
                 '사업계획변경서',
+                '주무부서 승인공문',
                 'PIMS 정보수정'
             ],
             explanation: '맞습니다. 사업비 비목 간 변경은 승인사항입니다. 승인요청공문과 주무부서 승인공문까지 확인하고, 변경된 내용은 PIMS 정보에도 반영해야 합니다.',
@@ -59,7 +59,7 @@ export const chapter5Data = {
             ],
             explanation: '맞습니다. 일반적인 사업비 세목 간 변경은 통보사항입니다. 다만 인건비 또는 여비의 세목 간 변경은 승인사항이므로 구분해야 합니다.',
             trapType: 'approval',
-            trapMessage: '하하! 세목 간 변경이라고 전부 승인사항은 아닙니다. 일반적인 세목 간 변경은 통보사항입니다. 변경내용을 제대로 읽어보세요!'
+            trapMessage: '하하! 세목 간 변경이라고 전부 승인사항은 아닙니다. 일반적인 세목 간 변경은 통보사항입니다. 변경 내용을 다시 읽어보세요!'
         },
         {
             id: 'labor_cost_detail_change',
@@ -69,14 +69,14 @@ export const chapter5Data = {
             correctType: 'approval',
             attachmentList: [
                 '승인요청공문',
-                '주무부서 승인공문',
                 '변경수행계획서',
                 '사업계획변경서',
+                '주무부서 승인공문',
                 'PIMS 정보수정'
             ],
             explanation: '맞습니다. 세목 간 변경이라도 인건비 세목 간 변경은 승인사항입니다. 승인요청공문과 승인공문까지 확인해야 합니다.',
             trapType: 'notification',
-            trapMessage: '하하! 세목 간 변경이라도 인건비는 예외입니다. 인건비 세목 간 변경은 통보사항이 아니라 승인사항입니다.'
+            trapMessage: '하하! 인건비 세목 간 변경은 통보사항이 아니라 승인사항입니다.'
         },
         {
             id: 'travel_cost_detail_change',
@@ -86,9 +86,9 @@ export const chapter5Data = {
             correctType: 'approval',
             attachmentList: [
                 '승인요청공문',
-                '주무부서 승인공문',
                 '변경수행계획서',
                 '사업계획변경서',
+                '주무부서 승인공문',
                 'PIMS 정보수정'
             ],
             explanation: '맞습니다. 세목 간 변경이라도 여비 세목 간 변경은 승인사항입니다. 승인요청공문과 승인공문을 함께 확인해야 합니다.',
@@ -109,7 +109,7 @@ export const chapter5Data = {
             ],
             explanation: '맞습니다. 실무책임자 변경은 통보사항입니다. 총괄책임자 변경과 구분해야 합니다.',
             trapType: 'approval',
-            trapMessage: '하하! 혹시나 해서 놓은 함정에 걸리셨군요. 실무책임자 변경은 승인사항이 아니라 통보사항입니다. 변경사항을 제대로 읽어보세요!'
+            trapMessage: '하하! 실무책임자 변경은 승인사항이 아니라 통보사항입니다.'
         },
         {
             id: 'general_manager_change',
@@ -119,14 +119,14 @@ export const chapter5Data = {
             correctType: 'approval',
             attachmentList: [
                 '승인요청공문',
-                '주무부서 승인공문',
                 '변경수행계획서',
                 '사업계획변경서',
+                '주무부서 승인공문',
                 'PIMS 정보수정'
             ],
             explanation: '맞습니다. 총괄책임자 변경은 승인사항입니다. 승인요청공문과 주무부서 승인공문까지 확인해야 합니다.',
             trapType: 'notification',
-            trapMessage: '하하! 총괄책임자 변경을 단순 통보로 넘기려 하셨군요. 총괄책임자 변경은 승인사항입니다.'
+            trapMessage: '하하! 총괄책임자 변경을 단순 통보로 넘기면 안 됩니다. 승인사항입니다.'
         },
         {
             id: 'participant_change',
@@ -141,9 +141,9 @@ export const chapter5Data = {
                 '보안서약서',
                 'PIMS 정보수정'
             ],
-            explanation: '맞습니다. 참여인력 변경은 통보사항입니다. 신규 참여인력의 보안서약서를 추가해야 하며, 기존 참여인력은 변경 전까지 참여했으므로 관련 자료를 삭제하면 안 됩니다. 변경된 참여인력 정보는 PIMS에도 반영해야 합니다.',
+            explanation: '맞습니다. 참여인력 변경은 통보사항입니다. 신규 참여인력의 보안서약서를 추가해야 하며, 기존 참여인력은 변경 전까지 참여했으므로 삭제하면 안 됩니다.',
             trapType: 'approval',
-            trapMessage: '하하! 참여인력 변경을 승인사항으로 착각하셨군요. 참여인력 변경은 통보사항입니다. 다만 신규 참여인력의 보안서약서와 PIMS 정보수정은 필요합니다.'
+            trapMessage: '하하! 참여인력 변경은 승인사항이 아니라 통보사항입니다. 신규 참여인력의 보안서약서와 PIMS 정보수정은 필요합니다.'
         },
         {
             id: 'contact_info_change',
@@ -156,7 +156,7 @@ export const chapter5Data = {
             ],
             explanation: '맞습니다. 단순 연락처 변경은 협약변경 서류를 조립할 필요 없이 PIMS 정보수정으로 처리합니다.',
             trapType: 'notification',
-            trapMessage: '하하! 단순 연락처 변경까지 통보사항으로 처리하려 하셨군요. 이 건은 기타사항으로 보고 PIMS 정보수정만 하면 됩니다.'
+            trapMessage: '하하! 단순 연락처 변경까지 통보사항으로 처리할 필요는 없습니다. 기타사항으로 보고 PIMS 정보수정만 하면 됩니다.'
         }
     ]
 };
