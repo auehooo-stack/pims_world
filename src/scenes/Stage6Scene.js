@@ -404,6 +404,10 @@ export class Stage6Scene extends Phaser.Scene {
     }
 
     createQuizOverlay() {
+        this.quizStoneNodes.forEach((stone) => {
+            stone?.pulseTween?.stop?.();
+            stone?.sparkleTween?.stop?.();
+        });
         this.quizOverlay?.destroy(true);
         this.quizOverlay = this.add.container(0, 0).setDepth(990);
         this.quizStaticNodes = [];
@@ -421,7 +425,7 @@ export class Stage6Scene extends Phaser.Scene {
         const feedbackPanel = this.add.rectangle(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, QUIZ_LAYOUT.feedback.width, QUIZ_LAYOUT.feedback.height, 0x120f24, 0.96).setOrigin(0, 0).setStrokeStyle(2, 0xffd36e, 0.35);
 
         for (let i = 0; i < 6; i += 1) {
-            this.quizStoneNodes.push(this.add.circle(QUIZ_LAYOUT.stoneStartX + i * QUIZ_LAYOUT.stoneGap, QUIZ_LAYOUT.stoneY, 9, 0x3b2d57, 1).setStrokeStyle(2, 0xffd36e, 0.12));
+            this.quizStoneNodes.push(this.createStoneIndicator(QUIZ_LAYOUT.stoneStartX + i * QUIZ_LAYOUT.stoneGap, QUIZ_LAYOUT.stoneY));
         }
 
         this.quizFeedbackText = this.add.text(QUIZ_LAYOUT.feedback.x + 18, QUIZ_LAYOUT.feedback.y + 18, '', {
@@ -432,9 +436,35 @@ export class Stage6Scene extends Phaser.Scene {
             lineSpacing: 6
         });
 
-        this.quizOverlay.add([backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...this.quizStoneNodes, this.quizFeedbackText]);
-        this.quizStaticNodes = [backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...this.quizStoneNodes, this.quizFeedbackText];
+        const stoneContainers = this.quizStoneNodes.map((stone) => stone.container);
+        this.quizOverlay.add([backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizFeedbackText]);
+        this.quizStaticNodes = [backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizFeedbackText];
         this.renderQuizFeedback('이번 사업 유형을 선택하세요.');
+    }
+
+    createStoneIndicator(x, y) {
+        const container = this.add.container(x, y);
+        const glow = this.add.circle(0, 0, 16, 0x75f6ff, 0).setBlendMode(Phaser.BlendModes.ADD);
+        const outer = this.add.polygon(0, 0, [0, -12, 10, -2, 7, 8, 0, 13, -7, 8, -10, -2], 0x241b3b, 1)
+            .setStrokeStyle(2, 0x6b568f, 0.45);
+        const core = this.add.polygon(0, 1, [0, -8, 6, -1, 4, 6, 0, 9, -4, 6, -6, -1], 0x3b2d57, 1);
+        const facet = this.add.polygon(-2, -2, [0, -5, 3, -1, 0, 3, -3, -1], 0x8b74b8, 0.22);
+        const sparkleH = this.add.rectangle(8, -9, 9, 2, 0xfff5c7, 1).setAlpha(0);
+        const sparkleV = this.add.rectangle(8, -9, 2, 9, 0xfff5c7, 1).setAlpha(0);
+        container.add([glow, outer, core, facet, sparkleH, sparkleV]);
+
+        return {
+            container,
+            glow,
+            outer,
+            core,
+            facet,
+            sparkleH,
+            sparkleV,
+            lit: false,
+            pulseTween: null,
+            sparkleTween: null
+        };
     }
 
     renderRouteSelection() {
@@ -630,9 +660,65 @@ export class Stage6Scene extends Phaser.Scene {
 
     updateStoneIndicators() {
         this.quizStoneNodes.forEach((stone, index) => {
+            const total = this.getQuizTotal() || 6;
+            stone.container.setVisible(index < total);
             const lit = index < this.stage6CorrectCount;
-            stone.setFillStyle(lit ? 0xffd36e : 0x3b2d57, 1);
-            stone.setStrokeStyle(2, lit ? 0xfff5c7 : 0x8b60e8, lit ? 0.9 : 0.12);
+            if (stone.lit === lit) {
+                return;
+            }
+
+            stone.lit = lit;
+            stone.pulseTween?.stop?.();
+            stone.sparkleTween?.stop?.();
+            stone.pulseTween = null;
+            stone.sparkleTween = null;
+
+            if (!lit) {
+                stone.glow.setAlpha(0);
+                stone.outer.setFillStyle(0x241b3b, 1).setStrokeStyle(2, 0x6b568f, 0.45);
+                stone.core.setFillStyle(0x3b2d57, 1);
+                stone.facet.setFillStyle(0x8b74b8, 0.22);
+                stone.sparkleH.setAlpha(0);
+                stone.sparkleV.setAlpha(0);
+                stone.container.setScale(1);
+                return;
+            }
+
+            stone.glow.setFillStyle(0x75f6ff, 0.2);
+            stone.outer.setFillStyle(0x2dcddd, 1).setStrokeStyle(2, 0xfff5c7, 0.95);
+            stone.core.setFillStyle(0xc9ffef, 1);
+            stone.facet.setFillStyle(0xffffff, 0.78);
+
+            this.tweens.add({
+                targets: stone.container,
+                scaleX: { from: 0.62, to: 1.12 },
+                scaleY: { from: 0.62, to: 1.12 },
+                duration: 260,
+                yoyo: true,
+                ease: 'Back.easeOut'
+            });
+            stone.pulseTween = this.tweens.add({
+                targets: stone.glow,
+                alpha: { from: 0.12, to: 0.55 },
+                scaleX: { from: 0.8, to: 1.35 },
+                scaleY: { from: 0.8, to: 1.35 },
+                duration: 760,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            stone.sparkleTween = this.tweens.add({
+                targets: [stone.sparkleH, stone.sparkleV],
+                alpha: { from: 0.12, to: 1 },
+                scaleX: { from: 0.55, to: 1.2 },
+                scaleY: { from: 0.55, to: 1.2 },
+                duration: 520,
+                delay: index * 90,
+                yoyo: true,
+                repeat: -1,
+                repeatDelay: 380,
+                ease: 'Sine.easeInOut'
+            });
         });
     }
 
@@ -688,6 +774,10 @@ export class Stage6Scene extends Phaser.Scene {
     }
 
     closeQuizOverlay() {
+        this.quizStoneNodes.forEach((stone) => {
+            stone?.pulseTween?.stop?.();
+            stone?.sparkleTween?.stop?.();
+        });
         this.quizOverlay?.destroy(true);
         this.quizOverlay = null;
         this.quizStaticNodes = [];
@@ -816,6 +906,10 @@ export class Stage6Scene extends Phaser.Scene {
         this.enterKey?.off('down', this.onEnterDown);
         this.input.off('pointerdown', this.onPointerDown);
         this.gemTween?.stop?.();
+        this.quizStoneNodes.forEach((stone) => {
+            stone?.pulseTween?.stop?.();
+            stone?.sparkleTween?.stop?.();
+        });
         this.mailPopup?.destroy(true);
         this.quizOverlay?.destroy(true);
         this.dialogue?.dialogBox?.destroy?.();
