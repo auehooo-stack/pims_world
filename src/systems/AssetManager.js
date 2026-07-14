@@ -40,6 +40,8 @@ export const ASSETS = {
         documentCheckClear: image('bg_document_check_clear', '/assets/backgrounds/document_check_clear_bg.png'),
         transformationRoom: image('bg_transformation_room', '/assets/backgrounds/transformation_room_bg.png'),
         transformationRoomQuiz: image('bg_transformation_room_quiz', '/assets/backgrounds/transformation_room_quiz_bg.png'),
+        performanceAltar: image('bg_performance_altar', '/assets/backgrounds/performance_altar_bg.png'),
+        performanceAltarQuiz: image('bg_performance_altar_quiz', '/assets/backgrounds/performance_altar_quiz_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
         stageClearClosed: image('bg_stage_clear_closed', '/assets/backgrounds/StageClearSceneClosed.png'),
         openingLogin: image('bg_opening_login', '/assets/opening/pims_login_screen.png')
@@ -85,8 +87,9 @@ export const ASSETS = {
         settingsButton: image('ui_top_settings_button', '/assets/ui/top/settings_button.png'),
         buttonNormal: image('ui_button_normal', '/assets/ui/button_normal.png'),
         buttonHover: image('ui_button_hover', '/assets/ui/button_hover.png'),
-        dialogNextIndicator: image('ui_dialog_next_indicator', '/assets/ui/dialog/dialog_next_indicator.png')
-        ,
+        dialogNextIndicator: image('ui_dialog_next_indicator', '/assets/ui/dialog/dialog_next_indicator.png'),
+        performanceMailPopup: image('ui_performance_mail_popup', '/assets/ui/performance_mail_popup.png'),
+        performanceMailConfirmButton: image('ui_performance_mail_confirm_button', '/assets/ui/performance_mail_confirm_button.png'),
         stampComplete: image('ui_stamp_complete', '/assets/ui/stamps/classification_complete.png'),
         stampRejected: image('ui_stamp_rejected', '/assets/ui/stamps/rejected.png')
     },
@@ -116,6 +119,7 @@ export const ASSETS = {
     effects: {
         coin: image('fx_coin', '/assets/effects/coin.png'),
         sparkle: image('fx_sparkle', '/assets/effects/sparkle.png'),
+        performanceGem: image('fx_performance_gem', '/assets/effects/performance_gem.png'),
         neonGlow: image('fx_neon_glow', '/assets/effects/neon_glow.png'),
         vaultFlash: image('fx_vault_flash', '/assets/effects/vault_flash.png')
     },
@@ -205,7 +209,7 @@ export const getInventoryIconKey = (id) => {
         case 'receipt':
             return ASSETS.objects.receipt.key;
         case 'stage6Gem':
-            return ASSETS.effects.sparkle.key;
+            return ASSETS.effects.performanceGem.key;
         default:
             return null;
     }

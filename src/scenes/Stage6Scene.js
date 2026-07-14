@@ -7,18 +7,29 @@ import { Player } from '../objects/Player.js';
 import { InteractableObject } from '../objects/InteractableObject.js';
 import { BottomHUD } from '../objects/BottomHUD.js';
 import { TopHUD } from '../objects/TopHUD.js';
-import { ASSETS, playBgmWithFade } from '../systems/AssetManager.js';
+import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
+
+const DEV_START_STAGE6_QUIZ = false;
 
 const QUIZ_LAYOUT = {
     titleX: GAME_WIDTH / 2,
     titleY: 34,
-    leftCard: { x: 52, y: 108, width: 696, height: 446 },
-    rightPanel: { x: 780, y: 108, width: 448, height: 446 },
-    feedback: { x: 52, y: 582, width: 1176, height: 90 },
-    stoneStartX: 520,
-    stoneY: 56,
+    leftCard: { x: 165, y: 222, width: 500, height: 290 },
+    rightPanel: { x: 720, y: 161, width: 430, height: 453 },
+    feedback: { x: 265, y: 630, width: 885, height: 75 },
+    stoneStartX: 550,
+    stoneY: 140,
     stoneGap: 36
+};
+
+const WORLD_LAYOUT = {
+    playerStart: { x: 311, y: 486 },
+    mailbox: { x: 130, y: 458, width: 83, height: 164 },
+    assistant: { x: 401, y: 458, width: 100, height: 136 },
+    altar: { x: 655, y: 408, width: 264, height: 214 },
+    gem: { x: 655, y: 438, width: 64, height: 64 },
+    terminal: { x: 1101, y: 458, width: 120, height: 154 }
 };
 
 const resetQuizState = () => ({
@@ -42,12 +53,15 @@ export class Stage6Scene extends Phaser.Scene {
         this.mailPopup = null;
         this.quizOverlay = null;
         this.quizFeedbackText = null;
+        this.quizProgressText = null;
         this.quizStaticNodes = [];
         this.quizDynamicNodes = [];
         this.quizChoiceButtons = [];
         this.quizRouteButtons = [];
         this.quizStoneNodes = [];
         this.quizStamp = null;
+        this.devFreezeLocked = false;
+        this.devFreezeIndicator = null;
         this.gemObject = null;
         this.gemTween = null;
         this.cursors = null;
@@ -59,8 +73,10 @@ export class Stage6Scene extends Phaser.Scene {
         this.onPointerDown = null;
         this.clickTarget = null;
         this.mailBoxObject = null;
+        this.assistantObject = null;
         this.altarObject = null;
         this.terminalObject = null;
+        this.hasStage6Background = false;
         this.transitionRequested = false;
         this.routeState = resetQuizState();
         this.stage6MailChecked = false;
@@ -124,6 +140,14 @@ export class Stage6Scene extends Phaser.Scene {
         this.enterKey.on('down', this.onEnterDown);
         this.input.on('pointerdown', this.onPointerDown);
         this.events.once('shutdown', () => this.cleanup());
+
+        if (import.meta.env.DEV && DEV_START_STAGE6_QUIZ) {
+            this.stage6MailChecked = true;
+            this.stage6AltarUnlocked = true;
+            GameState.set('stage6MailChecked', true);
+            GameState.set('stage6AltarUnlocked', true);
+            this.time.delayedCall(0, () => this.openQuizOverlay());
+        }
     }
 
     update() {
@@ -160,6 +184,16 @@ export class Stage6Scene extends Phaser.Scene {
     }
 
     drawBackground() {
+        const bgKey = ASSETS.backgrounds.performanceAltar.key;
+        this.hasStage6Background = hasTexture(this, bgKey);
+        if (this.hasStage6Background) {
+            this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, bgKey)
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setOrigin(0.5)
+                .setDepth(0);
+            return;
+        }
+
         const g = this.add.graphics().setDepth(0);
         g.fillStyle(0x070816, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         g.fillStyle(0x101535, 1).fillRect(0, 0, GAME_WIDTH, 160);
@@ -182,43 +216,59 @@ export class Stage6Scene extends Phaser.Scene {
     }
 
     createWorld() {
-        this.player = new Player(this, 160, 484);
+        this.player = new Player(this, WORLD_LAYOUT.playerStart.x, WORLD_LAYOUT.playerStart.y);
         this.player.speed = 260;
+        this.assistantObject = new InteractableObject(this, {
+            id: 'assistant',
+            name: 'KCA 간사',
+            prompt: 'Space: KCA 간사와 대화',
+            x: WORLD_LAYOUT.assistant.x,
+            y: WORLD_LAYOUT.assistant.y,
+            width: WORLD_LAYOUT.assistant.width,
+            height: WORLD_LAYOUT.assistant.height,
+            textureKey: ASSETS.characters.kcaAssistantIdle.key,
+            color: 0xff4f86,
+            animated: false
+        }, () => this.handleInteraction('assistant'));
         this.mailBoxObject = new InteractableObject(this, {
             id: 'mailbox',
             name: '성과조사 우편함',
             prompt: chapter6Data.mailPrompt,
-            x: 126,
-            y: 432,
-            width: 118,
-            height: 138,
+            x: WORLD_LAYOUT.mailbox.x,
+            y: WORLD_LAYOUT.mailbox.y,
+            width: WORLD_LAYOUT.mailbox.width,
+            height: WORLD_LAYOUT.mailbox.height,
             color: 0x7b59d7,
-            animated: false
+            animated: false,
+            hideVisuals: this.hasStage6Background,
+            labelOnly: this.hasStage6Background
         }, () => this.handleInteraction('mailbox'));
         this.altarObject = new InteractableObject(this, {
             id: 'altar',
             name: '성과의 제단',
             prompt: chapter6Data.altarPrompt,
-            x: 612,
-            y: 374,
-            width: 168,
-            height: 116,
+            x: WORLD_LAYOUT.altar.x,
+            y: WORLD_LAYOUT.altar.y,
+            width: WORLD_LAYOUT.altar.width,
+            height: WORLD_LAYOUT.altar.height,
             color: 0x8b60e8,
-            animated: false
+            animated: false,
+            hideVisuals: this.hasStage6Background,
+            labelOnly: this.hasStage6Background
         }, () => this.handleInteraction('altar'));
         this.terminalObject = new InteractableObject(this, {
             id: 'terminal',
             name: 'PIMS 단말기',
             prompt: chapter6Data.terminalPrompt,
-            x: 1168,
-            y: 428,
-            width: 112,
-            height: 148,
+            x: WORLD_LAYOUT.terminal.x,
+            y: WORLD_LAYOUT.terminal.y,
+            width: WORLD_LAYOUT.terminal.width,
+            height: WORLD_LAYOUT.terminal.height,
             hideBorder: true,
             animated: false
         }, () => this.handleInteraction('terminal'));
 
-        this.interactables = [this.mailBoxObject, this.altarObject, this.terminalObject];
+        this.interactables = [this.mailBoxObject, this.assistantObject, this.altarObject, this.terminalObject];
         this.interaction = new InteractionManager(this, this.player, this.interactables, (prompt) => this.bottomHud.setInteractionPrompt(prompt));
     }
 
@@ -261,6 +311,10 @@ export class Stage6Scene extends Phaser.Scene {
 
     tryInteract() {
         if (!this.dialogue.isActive && this.mode === 'field') {
+            if (this.stage6GemSpawned && !this.stage6GemCollected && this.isNearInteractable(this.gemObject, 150)) {
+                this.collectGem();
+                return;
+            }
             if (this.stage6GemCollected && !this.stage6PimsRegistered && this.isNearInteractable(this.terminalObject, 150)) {
                 this.handleTerminalInteraction();
                 return;
@@ -285,7 +339,9 @@ export class Stage6Scene extends Phaser.Scene {
         if (this.mode !== 'field') {
             return;
         }
-        if (id === 'mailbox') {
+        if (id === 'assistant') {
+            this.handleAssistantInteraction();
+        } else if (id === 'mailbox') {
             this.openMailPopup();
         } else if (id === 'altar') {
             this.handleAltarInteraction();
@@ -294,6 +350,21 @@ export class Stage6Scene extends Phaser.Scene {
         } else if (id === 'stage6Gem') {
             this.collectGem();
         }
+    }
+
+    handleAssistantInteraction() {
+        let text = '먼저 우편함에서 성과조사 협조 요청 공문을 확인하세요.';
+        if (this.stage6MailChecked && !this.stage6QuizCompleted) {
+            text = '공문을 확인했으니 성과의 제단에서 상황별 대응을 점검해 보세요.';
+        } else if (this.stage6QuizCompleted && !this.stage6GemCollected) {
+            text = '성과 보석이 생성되었습니다. 제단 앞에서 보석을 획득하세요.';
+        } else if (this.stage6GemCollected && !this.stage6PimsRegistered) {
+            text = '성과 보석을 획득했으니 PIMS 단말기에 대응 결과를 등록하세요.';
+        } else if (this.stage6PimsRegistered) {
+            text = '성과조사 대응 결과 등록까지 모두 완료했습니다.';
+        }
+
+        this.dialogue.say([{ speaker: 'KCA 간사', text }]);
     }
 
     openMailPopup() {
@@ -307,11 +378,12 @@ export class Stage6Scene extends Phaser.Scene {
         this.mailPopup?.destroy(true);
         this.mailPopup = this.add.container(0, 0).setDepth(995);
         const backdrop = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x04050f, 0.82);
-        const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 860, 438, 0xf3e9ff, 1).setStrokeStyle(3, 0x8b60e8, 0.75);
-        const title = this.add.text(GAME_WIDTH / 2, 154, chapter6Data.mailTitle, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '30px', color: '#3d235f' }).setOrigin(0.5);
-        const body = this.add.text(GAME_WIDTH / 2, 232, chapter6Data.mailBody, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#24193b', align: 'center', wordWrap: { width: 736 }, lineSpacing: 8 }).setOrigin(0.5);
-        const footer = this.add.text(GAME_WIDTH / 2, 454, '공문을 확인한 뒤 제단에서 해야 할 일을 이어서 진행하세요.', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '16px', color: '#5e4a20', align: 'center', wordWrap: { width: 720 } }).setOrigin(0.5);
-        const confirmButton = this.createOverlayButton(GAME_WIDTH / 2 - 84, 520, 168, 52, '확인', () => {
+        const panel = hasTexture(this, ASSETS.ui.performanceMailPopup.key)
+            ? this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSETS.ui.performanceMailPopup.key).setDisplaySize(860, 500)
+            : this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 860, 500, 0xf3e9ff, 1).setStrokeStyle(3, 0x8b60e8, 0.75);
+        const body = this.add.text(GAME_WIDTH / 2, 177, chapter6Data.mailBody, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#24193b', align: 'center', wordWrap: { width: 780 }, lineSpacing: 20 }).setOrigin(0.5, 0);
+        const footer = this.add.text(GAME_WIDTH / 2, 476, '공문을 확인한 뒤 제단에서 해야 할 일을 이어서 진행하세요.', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '16px', color: '#5e4a20', align: 'center', wordWrap: { width: 720 } }).setOrigin(0.5);
+        const confirmButton = this.createOverlayButton(GAME_WIDTH / 2, 532, 150, 44, '확인', () => {
             this.stage6MailChecked = true;
             this.stage6AltarUnlocked = true;
             GameState.set('stage6MailChecked', true);
@@ -320,12 +392,12 @@ export class Stage6Scene extends Phaser.Scene {
             this.bottomHud?.setInteractionVisible(true);
             this.dialogue.say([
                 { speaker: 'KCA 간사', text: '성과조사 공문을 확인했습니다.' },
-                { speaker: 'KCA 간사', text: '성과의 제단에서 내가 해야 할 일을 확인하세요.' }
+                { speaker: 'KCA 간사', text: '성과의 제단에서 전담기관 담당자가 해야할 일을 확인하세요.' }
             ]);
             this.refreshWorldState();
-        });
+        }, ASSETS.ui.performanceMailConfirmButton);
 
-        this.mailPopup.add([backdrop, panel, title, body, footer, confirmButton.container]);
+        this.mailPopup.add([backdrop, panel, body, footer, confirmButton.container]);
     }
 
     closeMailPopup() {
@@ -378,8 +450,9 @@ export class Stage6Scene extends Phaser.Scene {
         this.dialogue.say([
             { speaker: 'KCA 간사', text: '성과조사 대응 결과가 PIMS에 등록되었습니다.' },
             { speaker: 'KCA 간사', text: '다음 구역으로 이동합니다.' }
-        ]);
-        this.time.delayedCall(100, () => this.goToStage7());
+        ], () => {
+            this.transitionRequested = true;
+        });
     }
 
     openQuizOverlay() {
@@ -417,28 +490,33 @@ export class Stage6Scene extends Phaser.Scene {
         this.quizStoneNodes = [];
         this.quizStamp = null;
 
-        const backdrop = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050611, 0.83);
-        const title = this.add.text(QUIZ_LAYOUT.titleX, QUIZ_LAYOUT.titleY, '성과의 제단 : 성과조사 대응', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '26px', color: '#fff5c7' }).setOrigin(0.5);
-        const subtitle = this.add.text(QUIZ_LAYOUT.titleX, 66, '성과조사 협조 요청 공문을 확인한 뒤, 상황에 맞는 대응을 선택하세요.', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '16px', color: '#c9ffef' }).setOrigin(0.5);
-        const leftPanel = this.add.rectangle(QUIZ_LAYOUT.leftCard.x, QUIZ_LAYOUT.leftCard.y, QUIZ_LAYOUT.leftCard.width, QUIZ_LAYOUT.leftCard.height, 0xf7f0ff, 1).setOrigin(0, 0).setStrokeStyle(3, 0x8b60e8, 0.7);
-        const rightPanel = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x, QUIZ_LAYOUT.rightPanel.y, QUIZ_LAYOUT.rightPanel.width, QUIZ_LAYOUT.rightPanel.height, 0x120f24, 0.94).setOrigin(0, 0).setStrokeStyle(2, 0x75f6ff, 0.4);
-        const feedbackPanel = this.add.rectangle(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, QUIZ_LAYOUT.feedback.width, QUIZ_LAYOUT.feedback.height, 0x120f24, 0.96).setOrigin(0, 0).setStrokeStyle(2, 0xffd36e, 0.35);
+        const backdrop = hasTexture(this, ASSETS.backgrounds.performanceAltarQuiz.key)
+            ? this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSETS.backgrounds.performanceAltarQuiz.key).setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+            : this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050611, 0.83);
+        const leftPanel = this.add.rectangle(QUIZ_LAYOUT.leftCard.x, QUIZ_LAYOUT.leftCard.y, QUIZ_LAYOUT.leftCard.width, QUIZ_LAYOUT.leftCard.height, 0xf7f0ff, 0).setOrigin(0, 0);
+        const rightPanel = this.add.rectangle(QUIZ_LAYOUT.rightPanel.x, QUIZ_LAYOUT.rightPanel.y, QUIZ_LAYOUT.rightPanel.width, QUIZ_LAYOUT.rightPanel.height, 0x120f24, 0).setOrigin(0, 0);
+        const feedbackPanel = this.add.rectangle(QUIZ_LAYOUT.feedback.x, QUIZ_LAYOUT.feedback.y, QUIZ_LAYOUT.feedback.width, QUIZ_LAYOUT.feedback.height, 0x120f24, 0).setOrigin(0, 0);
 
         for (let i = 0; i < 6; i += 1) {
             this.quizStoneNodes.push(this.createStoneIndicator(QUIZ_LAYOUT.stoneStartX + i * QUIZ_LAYOUT.stoneGap, QUIZ_LAYOUT.stoneY));
         }
 
-        this.quizFeedbackText = this.add.text(QUIZ_LAYOUT.feedback.x + 18, QUIZ_LAYOUT.feedback.y + 18, '', {
+        this.quizFeedbackText = this.add.text(QUIZ_LAYOUT.feedback.x + 18, QUIZ_LAYOUT.feedback.y + QUIZ_LAYOUT.feedback.height / 2, '', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '17px',
             color: '#f8f3ff',
             wordWrap: { width: QUIZ_LAYOUT.feedback.width - 36 },
             lineSpacing: 6
-        });
+        }).setOrigin(0, 0.5);
+        this.quizProgressText = this.add.text(QUIZ_LAYOUT.stoneStartX - 24, QUIZ_LAYOUT.stoneY, '진행도 0 / -', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: '#fff5c7'
+        }).setOrigin(1, 0.5);
 
         const stoneContainers = this.quizStoneNodes.map((stone) => stone.container);
-        this.quizOverlay.add([backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizFeedbackText]);
-        this.quizStaticNodes = [backdrop, title, subtitle, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizFeedbackText];
+        this.quizOverlay.add([backdrop, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizProgressText, this.quizFeedbackText]);
+        this.quizStaticNodes = [backdrop, leftPanel, rightPanel, feedbackPanel, ...stoneContainers, this.quizProgressText, this.quizFeedbackText];
         this.renderQuizFeedback('이번 사업 유형을 선택하세요.');
     }
 
@@ -470,13 +548,13 @@ export class Stage6Scene extends Phaser.Scene {
     renderRouteSelection() {
         this.clearQuizDynamicNodes();
 
-        const prompt = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 28, chapter6Data.routeTitle, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '28px', color: '#3d235f' });
+        const prompt = this.add.text(QUIZ_LAYOUT.leftCard.x + QUIZ_LAYOUT.leftCard.width / 2, QUIZ_LAYOUT.leftCard.y - 30, chapter6Data.routeTitle, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#fff5c7' }).setOrigin(0.5);
         const guide = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 86, chapter6Data.subtitle, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#5e4a20' });
         const memo = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 142, '루트를 선택하면 해당 상황 문제 세트가 시작됩니다.', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '17px', color: '#24193b', wordWrap: { width: 604 }, lineSpacing: 8 });
-        const label = this.add.text(QUIZ_LAYOUT.rightPanel.x + 24, QUIZ_LAYOUT.rightPanel.y + 20, '사업 유형', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '20px', color: '#fff5c7' });
+        const label = this.add.text(QUIZ_LAYOUT.rightPanel.x + QUIZ_LAYOUT.rightPanel.width / 2, QUIZ_LAYOUT.rightPanel.y + 20, '사업 유형', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '20px', color: '#fff5c7' }).setOrigin(0.5, 0);
 
         chapter6Data.routeOptions.forEach((route, index) => {
-            const button = this.createQuizButton(QUIZ_LAYOUT.rightPanel.x + 26, QUIZ_LAYOUT.rightPanel.y + 86 + index * 112, QUIZ_LAYOUT.rightPanel.width - 52, 86, `${index + 1}. ${route.label}`, () => this.selectRoute(route.id));
+            const button = this.createQuizButton(QUIZ_LAYOUT.rightPanel.x + QUIZ_LAYOUT.rightPanel.width / 2, QUIZ_LAYOUT.rightPanel.y + 119 + index * 126, QUIZ_LAYOUT.rightPanel.width - 48, 105, route.label, () => this.selectRoute(route.id));
             this.quizRouteButtons.push(button);
             this.quizOverlay.add(button.container);
         });
@@ -517,45 +595,39 @@ export class Stage6Scene extends Phaser.Scene {
             return;
         }
 
-        const questionLabel = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 24, '상황', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#7a5b1f' });
+        const questionLabel = this.add.text(QUIZ_LAYOUT.leftCard.x + QUIZ_LAYOUT.leftCard.width / 2, QUIZ_LAYOUT.leftCard.y - 30, '상황', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#fff5c7' }).setOrigin(0.5);
         const situation = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 62, question.situation, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '22px', color: '#24193b', wordWrap: { width: 500 }, lineSpacing: 10 });
-        const routeHint = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 180, chapter6Data.routeIntro[this.stage6SelectedRoute] || '', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '16px', color: '#4f5d4f', wordWrap: { width: 540 }, lineSpacing: 8 });
-        const note = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 258, '정답은 하나입니다. 천천히 읽고 고르세요.', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '15px', color: '#8b60e8' });
-        const label = this.add.text(QUIZ_LAYOUT.rightPanel.x + 24, QUIZ_LAYOUT.rightPanel.y + 20, '선택지', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '20px', color: '#fff5c7' });
+        const routeHint = this.add.text(QUIZ_LAYOUT.leftCard.x + 26, QUIZ_LAYOUT.leftCard.y + 228, chapter6Data.routeIntro[this.stage6SelectedRoute] || '', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '15px', color: '#8b60e8', wordWrap: { width: 540 }, lineSpacing: 8 });
+        const label = this.add.text(QUIZ_LAYOUT.rightPanel.x + QUIZ_LAYOUT.rightPanel.width / 2, QUIZ_LAYOUT.rightPanel.y + 20, '선택지', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '20px', color: '#fff5c7' }).setOrigin(0.5, 0);
 
-        this.quizOverlay.add([questionLabel, situation, routeHint, note, label]);
-        this.quizDynamicNodes.push(questionLabel, situation, routeHint, note, label);
+        this.quizOverlay.add([questionLabel, situation, routeHint, label]);
+        this.quizDynamicNodes.push(questionLabel, situation, routeHint, label);
 
         question.options.forEach((optionText, index) => {
-            const button = this.createQuizButton(QUIZ_LAYOUT.rightPanel.x + 24, QUIZ_LAYOUT.rightPanel.y + 74 + index * 108, QUIZ_LAYOUT.rightPanel.width - 48, 88, `${index + 1}. ${optionText}`, () => this.submitAnswer(index));
+            const button = this.createQuizButton(QUIZ_LAYOUT.rightPanel.x + QUIZ_LAYOUT.rightPanel.width / 2, QUIZ_LAYOUT.rightPanel.y + 119 + index * 126, QUIZ_LAYOUT.rightPanel.width - 48, 105, optionText, () => this.submitAnswer(index));
             this.quizChoiceButtons.push(button);
             this.quizOverlay.add(button.container);
         });
 
-        this.renderQuizFeedback(`진행도 ${this.stage6CorrectCount} / ${this.getQuizTotal()}`);
+        this.renderQuizFeedback('정답은 하나입니다. 천천히 읽고 고르세요.');
+        this.updateQuizProgress();
         this.updateStoneIndicators();
     }
 
     createQuizButton(x, y, width, height, label, onClick) {
         const container = this.add.container(0, 0);
-        const background = this.add.rectangle(x, y, width, height, 0x24193b, 0.92).setStrokeStyle(2, 0x8b60e8, 0.8);
-        const text = this.add.text(x + 24, y, label, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '17px', color: '#f8f3ff', wordWrap: { width: width - 58 } }).setOrigin(0, 0.5);
-        const numberBox = this.add.rectangle(x + 28, y, 30, 30, 0xffd36e, 1).setStrokeStyle(2, 0x3d235f, 0.9);
-        const numberText = this.add.text(x + 28, y, label.charAt(0), { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#3d235f' }).setOrigin(0.5);
+        const background = this.add.rectangle(x, y, width, height, 0x24193b, 0);
+        const text = this.add.text(x - width / 2 + 59, y, label, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '17px', color: '#f8f3ff', wordWrap: { width: width - 83 }, lineSpacing: 5 }).setOrigin(0, 0.5);
         const hit = this.add.rectangle(x, y, width, height, 0x000000, 0).setInteractive({ useHandCursor: true });
         let enabled = true;
 
         const normal = () => {
-            background.setFillStyle(0x24193b, 0.92);
-            background.setStrokeStyle(2, 0x8b60e8, 0.8);
+            background.setFillStyle(0x24193b, 0);
             text.setColor('#f8f3ff');
-            numberBox.setFillStyle(0xffd36e, 1);
         };
         const hover = () => {
-            background.setFillStyle(0x39295b, 0.98);
-            background.setStrokeStyle(2, 0xffd36e, 0.95);
+            background.setFillStyle(0x39295b, 0.72);
             text.setColor('#fff5c7');
-            numberBox.setFillStyle(0xfff0b6, 1);
         };
 
         hit.on('pointerover', () => { if (enabled) hover(); });
@@ -568,7 +640,7 @@ export class Stage6Scene extends Phaser.Scene {
             onClick?.();
         });
 
-        container.add([background, numberBox, numberText, text, hit]);
+        container.add([background, text, hit]);
         return {
             container,
             setEnabled: (value) => {
@@ -580,7 +652,6 @@ export class Stage6Scene extends Phaser.Scene {
                 } else {
                     background.setFillStyle(0x191325, 0.9);
                     text.setColor('#b9b9b9');
-                    numberBox.setFillStyle(0x5f5f5f, 1);
                 }
             }
         };
@@ -616,6 +687,7 @@ export class Stage6Scene extends Phaser.Scene {
         this.stage6CorrectCount += 1;
         GameState.set('stage6CorrectCount', this.stage6CorrectCount);
         this.renderQuizFeedback(question.correctFeedback);
+        this.updateQuizProgress();
         this.showStamp('확인 완료');
         this.updateStoneIndicators();
         this.disableQuizButtons();
@@ -659,8 +731,10 @@ export class Stage6Scene extends Phaser.Scene {
     }
 
     updateStoneIndicators() {
+        const total = this.getQuizTotal() || 6;
+        const centeredStartX = GAME_WIDTH / 2 - ((total - 1) * QUIZ_LAYOUT.stoneGap) / 2;
         this.quizStoneNodes.forEach((stone, index) => {
-            const total = this.getQuizTotal() || 6;
+            stone.container.setX(centeredStartX + index * QUIZ_LAYOUT.stoneGap);
             stone.container.setVisible(index < total);
             const lit = index < this.stage6CorrectCount;
             if (stone.lit === lit) {
@@ -722,6 +796,11 @@ export class Stage6Scene extends Phaser.Scene {
         });
     }
 
+    updateQuizProgress() {
+        const total = this.getQuizTotal();
+        this.quizProgressText?.setText(`진행도 ${this.stage6CorrectCount} / ${total || '-'}`);
+    }
+
     getCurrentQuestion() {
         if (!this.stage6SelectedRoute) {
             return null;
@@ -758,19 +837,61 @@ export class Stage6Scene extends Phaser.Scene {
         this.quizRouteButtons = [];
         this.renderQuizFeedback('성과 보석이 깨어났습니다!');
 
-        const gemX = QUIZ_LAYOUT.leftCard.x + QUIZ_LAYOUT.leftCard.width / 2;
+        const gemX = GAME_WIDTH / 2;
         const gemY = QUIZ_LAYOUT.leftCard.y + QUIZ_LAYOUT.leftCard.height / 2 - 10;
+        const completionShade = this.add.graphics();
+        completionShade.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.96, 0.96, 0.82, 0.82);
+        completionShade.fillRect(0, 0, GAME_WIDTH, QUIZ_LAYOUT.feedback.y);
+        const gemAura = this.add.circle(gemX, gemY, 108, 0xffc94f, 0.07).setBlendMode(Phaser.BlendModes.ADD);
+        const gemWaveOuter = this.add.circle(gemX, gemY, 78, 0xffd36e, 0.14).setBlendMode(Phaser.BlendModes.ADD);
+        const gemWaveInner = this.add.circle(gemX, gemY, 62, 0xfff0b6, 0.1).setBlendMode(Phaser.BlendModes.ADD);
         const gemGlow = this.add.circle(gemX, gemY, 66, 0xfff0b6, 0.12).setStrokeStyle(3, 0xffd36e, 0.6);
-        const gemCore = this.add.star(gemX, gemY, 6, 26, 42, 0xffd36e, 1).setStrokeStyle(2, 0x8b60e8, 0.8);
-        const notice = this.add.text(gemX, QUIZ_LAYOUT.leftCard.y + 86, '성과 보석이 깨어났습니다!', { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '26px', color: '#3d235f' }).setOrigin(0.5);
-        const confirmButton = this.createOverlayButton(gemX - 84, QUIZ_LAYOUT.leftCard.y + 364, 168, 50, '확인', () => {
+        const gemCore = hasTexture(this, ASSETS.effects.performanceGem.key)
+            ? this.add.image(gemX, gemY, ASSETS.effects.performanceGem.key).setDisplaySize(96, 96)
+            : this.add.star(gemX, gemY, 6, 26, 42, 0xffd36e, 1).setStrokeStyle(2, 0x8b60e8, 0.8);
+        const confirmButton = this.createOverlayButton(gemX, QUIZ_LAYOUT.leftCard.y + 364, 168, 50, '확인', () => {
             this.closeQuizOverlay();
             this.spawnGemObject();
             this.bottomHud?.setInteractionVisible(true);
             this.dialogue.say([{ speaker: 'KCA 간사', text: '좋습니다. 이제 제단 앞의 성과 보석을 획득하세요.' }]);
-        });
+        }, ASSETS.ui.performanceMailConfirmButton);
 
-        this.quizOverlay.add([gemGlow, gemCore, notice, confirmButton.container]);
+        this.quizOverlay.add([completionShade, gemAura, gemWaveOuter, gemWaveInner, gemGlow, gemCore, confirmButton.container]);
+        this.tweens.add({
+            targets: gemAura,
+            alpha: { from: 0.05, to: 0.14 },
+            scale: { from: 0.88, to: 1.22 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        this.tweens.add({
+            targets: gemGlow,
+            alpha: { from: 0.55, to: 0.18 },
+            scale: { from: 0.94, to: 1.08 },
+            duration: 1200,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        this.tweens.add({
+            targets: gemWaveInner,
+            alpha: { from: 0.16, to: 0 },
+            scale: { from: 0.82, to: 1.65 },
+            duration: 1700,
+            repeat: -1,
+            ease: 'Sine.easeOut'
+        });
+        this.tweens.add({
+            targets: gemWaveOuter,
+            alpha: { from: 0.24, to: 0 },
+            scale: { from: 0.88, to: 2.35 },
+            duration: 2300,
+            delay: 520,
+            repeat: -1,
+            ease: 'Sine.easeOut'
+        });
     }
 
     closeQuizOverlay() {
@@ -802,11 +923,13 @@ export class Stage6Scene extends Phaser.Scene {
             id: 'stage6Gem',
             name: '성과 보석',
             prompt: chapter6Data.gemPrompt,
-            x: 666,
-            y: 362,
-            width: 56,
-            height: 56,
-            textureKey: ASSETS.effects.sparkle.key,
+            x: WORLD_LAYOUT.gem.x,
+            y: WORLD_LAYOUT.gem.y,
+            width: WORLD_LAYOUT.gem.width,
+            height: WORLD_LAYOUT.gem.height,
+            textureKey: hasTexture(this, ASSETS.effects.performanceGem.key)
+                ? ASSETS.effects.performanceGem.key
+                : ASSETS.effects.sparkle.key,
             imageAlpha: 0.95,
             hideBorder: true,
             animated: false
@@ -845,6 +968,7 @@ export class Stage6Scene extends Phaser.Scene {
             this.mailBoxObject.prompt = this.stage6MailChecked ? '성과조사 공문 확인 완료' : chapter6Data.mailPrompt;
         }
         if (this.altarObject) {
+            this.altarObject.available = !(this.stage6GemSpawned && !this.stage6GemCollected);
             if (!this.stage6MailChecked) {
                 this.altarObject.prompt = '먼저 우편함에서 공문을 확인하세요.';
             } else if (!this.stage6QuizCompleted) {
@@ -868,19 +992,30 @@ export class Stage6Scene extends Phaser.Scene {
         }
     }
 
-    createOverlayButton(x, y, width, height, label, onClick) {
+    createOverlayButton(x, y, width, height, label, onClick, backgroundAsset = null) {
         const container = this.add.container(0, 0);
-        const background = this.add.rectangle(x, y, width, height, 0x24193b, 0.95).setStrokeStyle(2, 0x8b60e8, 0.8);
+        const usesImage = backgroundAsset && hasTexture(this, backgroundAsset.key);
+        const background = usesImage
+            ? this.add.image(x, y, backgroundAsset.key).setDisplaySize(width, height)
+            : this.add.rectangle(x, y, width, height, 0x24193b, 0.95).setStrokeStyle(2, 0x8b60e8, 0.8);
         const text = this.add.text(x, y, label, { fontFamily: 'GALMURI, Arial, sans-serif', fontSize: '18px', color: '#f8f3ff' }).setOrigin(0.5);
         const hit = this.add.rectangle(x, y, width, height, 0x000000, 0).setInteractive({ useHandCursor: true });
         hit.on('pointerover', () => {
-            background.setFillStyle(0x39295b, 1);
-            background.setStrokeStyle(2, 0xffd36e, 0.95);
+            if (usesImage) {
+                background.setTint(0xffe5a3);
+            } else {
+                background.setFillStyle(0x39295b, 1);
+                background.setStrokeStyle(2, 0xffd36e, 0.95);
+            }
             text.setColor('#fff5c7');
         });
         hit.on('pointerout', () => {
-            background.setFillStyle(0x24193b, 0.95);
-            background.setStrokeStyle(2, 0x8b60e8, 0.8);
+            if (usesImage) {
+                background.clearTint();
+            } else {
+                background.setFillStyle(0x24193b, 0.95);
+                background.setStrokeStyle(2, 0x8b60e8, 0.8);
+            }
             text.setColor('#f8f3ff');
         });
         hit.on('pointerdown', (pointer, localX, localY, event) => {
@@ -889,6 +1024,40 @@ export class Stage6Scene extends Phaser.Scene {
         });
         container.add([background, text, hit]);
         return { container };
+    }
+
+    toggleDevFreeze() {
+        if (!import.meta.env.DEV) {
+            return;
+        }
+
+        this.devFreezeLocked = !this.devFreezeLocked;
+        this.devFreezeIndicator?.destroy?.();
+        this.devFreezeIndicator = this.add.text(GAME_WIDTH - 24, 24, this.devFreezeLocked ? 'LOCK ON' : 'LOCK OFF', {
+            fontFamily: 'GALMURI, Arial, sans-serif',
+            fontSize: '16px',
+            color: this.devFreezeLocked ? '#fff5c7' : '#c9ffef',
+            backgroundColor: 'rgba(7, 10, 20, 0.86)',
+            padding: { left: 10, right: 10, top: 6, bottom: 6 }
+        })
+            .setOrigin(1, 0)
+            .setScrollFactor(0)
+            .setDepth(3000);
+
+        if (this.devFreezeLocked) {
+            this.scene.pause();
+            return;
+        }
+
+        if (this.scene.isPaused()) {
+            this.scene.resume();
+        }
+        this.time.delayedCall(700, () => {
+            if (!this.devFreezeLocked) {
+                this.devFreezeIndicator?.destroy?.();
+                this.devFreezeIndicator = null;
+            }
+        });
     }
 
     goToStage7() {
@@ -906,6 +1075,9 @@ export class Stage6Scene extends Phaser.Scene {
         this.enterKey?.off('down', this.onEnterDown);
         this.input.off('pointerdown', this.onPointerDown);
         this.gemTween?.stop?.();
+        this.devFreezeIndicator?.destroy?.();
+        this.devFreezeIndicator = null;
+        this.devFreezeLocked = false;
         this.quizStoneNodes.forEach((stone) => {
             stone?.pulseTween?.stop?.();
             stone?.sparkleTween?.stop?.();
