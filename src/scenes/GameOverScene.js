@@ -14,6 +14,8 @@ export class GameOverScene extends Phaser.Scene {
 
     create() {
         this.cameras.main.setBackgroundColor(0x090714);
+        const reason = GameState.get('gameOverReason');
+        const restartScene = GameState.get('gameOverRestartScene');
 
         this.add.rectangle(CENTER_X, CENTER_Y, WIDTH, HEIGHT, 0x05050a, 0.92);
         this.add.rectangle(CENTER_X, CENTER_Y, WIDTH, HEIGHT, 0x2d1038, 0.10);
@@ -27,14 +29,16 @@ export class GameOverScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(CENTER_X, 245, 'HP가 모두 소진되었습니다.', {
+        this.add.text(CENTER_X, 245, reason || 'HP가 모두 소진되었습니다.', {
             fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '26px',
+            fontSize: reason ? '21px' : '26px',
             color: '#f8f3ff',
-            align: 'center'
+            align: 'center',
+            lineSpacing: 10,
+            wordWrap: { width: 860 }
         }).setOrigin(0.5);
 
-        this.add.text(CENTER_X, 292, '처음부터 다시 시작할 수 있습니다.', {
+        this.add.text(CENTER_X, reason ? 330 : 292, restartScene ? '7단계를 처음부터 다시 시작할 수 있습니다.' : '처음부터 다시 시작할 수 있습니다.', {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: '#c9ffef',
@@ -48,7 +52,11 @@ export class GameOverScene extends Phaser.Scene {
 
         this.createButton(CENTER_X + 160, 430, '다시 시작', () => {
             GameState.reset();
-            this.scene.start('StartScene');
+            if (restartScene === 'Stage7Scene') {
+                GameState.set('stage6GemCollected', true);
+                GameState.set('currentChapter', 7);
+            }
+            this.scene.start(restartScene || 'StartScene');
         });
     }
 

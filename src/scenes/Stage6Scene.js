@@ -448,8 +448,8 @@ export class Stage6Scene extends Phaser.Scene {
         this.refreshWorldState();
         this.bottomHud?.setInteractionPrompt('성과조사 대응 등록 완료');
         this.dialogue.say([
-            { speaker: 'KCA 간사', text: '성과조사 대응 결과가 PIMS에 등록되었습니다.' },
-            { speaker: 'KCA 간사', text: '다음 구역으로 이동합니다.' }
+            { speaker: 'KCA 간사', text: '성과조사 결과가 PIMS에 등록되었습니다.' },
+            { speaker: 'KCA 간사', text: '이제 정산을 시작해볼까요? 다음 단계로 이동합니다.' }
         ], () => {
             this.transitionRequested = true;
         });
@@ -677,8 +677,18 @@ export class Stage6Scene extends Phaser.Scene {
             return;
         }
 
+        GameState.decreaseHp(10);
+        GameState.set('mistakeCount', (GameState.get('mistakeCount') || 0) + 1);
         this.renderQuizFeedback(question.wrongFeedback);
-        this.cameras.main.shake(80, 0.002);
+        this.cameras.main.shake(120, 0.0035);
+        this.refreshHud();
+
+        if ((GameState.get('hp') ?? 0) <= 0) {
+            this.stage6IsAnswerLocked = true;
+            GameState.set('stage6IsAnswerLocked', true);
+            this.disableQuizButtons();
+            this.time.delayedCall(220, () => this.scene.start('GameOverScene'));
+        }
     }
 
     handleCorrectAnswer(question) {

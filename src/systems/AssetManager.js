@@ -42,6 +42,7 @@ export const ASSETS = {
         transformationRoomQuiz: image('bg_transformation_room_quiz', '/assets/backgrounds/transformation_room_quiz_bg.png'),
         performanceAltar: image('bg_performance_altar', '/assets/backgrounds/performance_altar_bg.png'),
         performanceAltarQuiz: image('bg_performance_altar_quiz', '/assets/backgrounds/performance_altar_quiz_bg.png'),
+        reportDeadlineRoom: image('bg_report_deadline_room', '/assets/backgrounds/report_deadline_room_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
         stageClearClosed: image('bg_stage_clear_closed', '/assets/backgrounds/StageClearSceneClosed.png'),
         openingLogin: image('bg_opening_login', '/assets/opening/pims_login_screen.png')
@@ -114,7 +115,10 @@ export const ASSETS = {
         hpHeartEmpty: image('icon_hp_heart_empty', '/assets/icons/heart-empty.png'),
         calendar: image('icon_calendar', '/assets/icons/calendar.png'),
         executionRate: image('icon_execution_rate', '/assets/icons/execution_rate.png'),
-        interactMark: image('icon_interact_mark', '/assets/icons/interact_mark.png')
+        interactMark: image('icon_interact_mark', '/assets/icons/interact_mark.png'),
+        performanceEvidence: image('icon_performance_evidence', '/assets/icons/performance_evidence.png'),
+        finalReport: image('icon_final_report', '/assets/icons/final_report.png'),
+        settlementReport: image('icon_settlement_report', '/assets/icons/settlement_report.png')
     },
     effects: {
         coin: image('fx_coin', '/assets/effects/coin.png'),
@@ -210,6 +214,12 @@ export const getInventoryIconKey = (id) => {
             return ASSETS.objects.receipt.key;
         case 'stage6Gem':
             return ASSETS.effects.performanceGem.key;
+        case 'stage7Evidence':
+            return ASSETS.icons.performanceEvidence.key;
+        case 'stage7FinalReport':
+            return ASSETS.icons.finalReport.key;
+        case 'stage7SettlementReport':
+            return ASSETS.icons.settlementReport.key;
         default:
             return null;
     }

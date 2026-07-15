@@ -2,7 +2,9 @@
 import { loadAssets } from '../systems/AssetManager.js';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
-const DEV_START_SCENE = 'TransformationRoomScene';
+const DEV_START_SCENE = 'Stage7Scene';
+const DEV_STAGE4_VIEW_KEY = 'pims_world.dev.stage4_view';
+const DEV_STAGE4_LOCK_KEY = 'pims_world.dev.stage4_lock';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -53,6 +55,14 @@ export class PreloadScene extends Phaser.Scene {
 
     create() {
         this.registry.set('assetFailures', [...(this.failedAssets || [])]);
+        if (import.meta.env.DEV && typeof window !== 'undefined') {
+            try {
+                window.sessionStorage.removeItem(DEV_STAGE4_VIEW_KEY);
+                window.sessionStorage.removeItem(DEV_STAGE4_LOCK_KEY);
+            } catch {
+                // Ignore storage failures in dev.
+            }
+        }
         this.scene.start(DEV_START_SCENE);
     }
 }

@@ -268,6 +268,22 @@ export class BottomHUD {
                     count: 1
                 });
             }
+        } else if (GameState.get('currentChapter') === 7) {
+            items = [
+                { id: 'guidelineBook', label: '지침서', color: 0x75f6ff, count: 1 }
+            ];
+            if (!GameState.get('stage7FinalReportCreated') && GameState.get('stage6GemCollected')) {
+                items.push({ id: 'stage6Gem', label: '성과 보석', color: 0xffd36e, fontSize: '9px', count: 1 });
+            }
+            if (GameState.get('stage7EvidenceCollected') && !GameState.get('stage7FinalReportCreated')) {
+                items.push({ id: 'stage7Evidence', label: '성과증빙', color: 0xc9ffef, fontSize: '9px', count: 1 });
+            }
+            if (GameState.get('stage7FinalReportCreated')) {
+                items.push({ id: 'stage7FinalReport', label: '최종보고서', color: 0xfff5c7, fontSize: '9px', count: 1 });
+            }
+            if (GameState.get('stage7SettlementReportReceived')) {
+                items.push({ id: 'stage7SettlementReport', label: '정산보고서', color: 0xd9c8ff, fontSize: '9px', count: 1 });
+            }
         } else {
             // TODO: add the budget coin item to inventory when stage 1 clear rewards are wired in.
             if (GameState.get('businessCostCoin')) {

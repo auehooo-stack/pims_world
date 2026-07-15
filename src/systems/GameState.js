@@ -86,6 +86,16 @@ export const initialGameState = {
     stage6CorrectCount: 0,
     stage6FeedbackMessage: '',
     stage6IsAnswerLocked: false,
+    stage7EvidenceCollected: false,
+    stage7FinalReportCreated: false,
+    stage7AccountingRequested: false,
+    stage7SettlementReportReceived: false,
+    stage7PimsSubmitted: false,
+    stage7DeadlineTimerActive: false,
+    stage7TimeRemaining: 28,
+    stage7Failed: false,
+    gameOverReason: null,
+    gameOverRestartScene: null,
     savedPlayerPosition: null
 };
 
@@ -173,6 +183,22 @@ export const GameState = {
                 return '성과의 제단에서 퀴즈를 시작하세요.';
             }
             return '우편함에서 성과조사 협조 요청 공문을 확인하세요.';
+        }
+
+        if (this.get('currentChapter') === 7) {
+            if (this.get('stage7PimsSubmitted')) {
+                return '최종보고서와 정산보고서 제출을 완료했습니다.';
+            }
+            if (!this.get('stage7EvidenceCollected')) {
+                return '성과증빙 보관함에서 성과증빙을 확인하세요.';
+            }
+            if (!this.get('stage7FinalReportCreated')) {
+                return '성과증빙을 확인해 최종보고서를 완성하세요.';
+            }
+            if (!this.get('stage7SettlementReportReceived')) {
+                return '회계사에게 정산보고서 검토를 의뢰하세요.';
+            }
+            return 'PIMS 단말기에서 두 보고서를 제출하세요.';
         }
 
         if (this.get('currentChapter') === 2) {
