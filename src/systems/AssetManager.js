@@ -43,6 +43,7 @@ export const ASSETS = {
         performanceAltar: image('bg_performance_altar', '/assets/backgrounds/performance_altar_bg.png'),
         performanceAltarQuiz: image('bg_performance_altar_quiz', '/assets/backgrounds/performance_altar_quiz_bg.png'),
         reportDeadlineRoom: image('bg_report_deadline_room', '/assets/backgrounds/report_deadline_room_bg.png'),
+        returnValley: image('bg_return_valley', '/assets/backgrounds/return_valley_bg.png'),
         stageClear: image('bg_stage_clear', '/assets/backgrounds/StageClearScene.png'),
         stageClearClosed: image('bg_stage_clear_closed', '/assets/backgrounds/StageClearSceneClosed.png'),
         openingLogin: image('bg_opening_login', '/assets/opening/pims_login_screen.png')

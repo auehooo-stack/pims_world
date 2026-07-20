@@ -94,6 +94,23 @@ export const initialGameState = {
     stage7DeadlineTimerActive: false,
     stage7TimeRemaining: 28,
     stage7Failed: false,
+    stage8CurrentDay: 1,
+    stage8SecondsPerDay: 15,
+    stage8ReturnDateSelected: false,
+    stage8SelectedReturnDay: null,
+    stage8AdditionalInterestChecked: false,
+    stage8AdditionalInterest: 3200,
+    stage8NoticeApproved: false,
+    stage8ReturnNoticeReceived: false,
+    stage8PaymentCompleted: false,
+    stage8WrongCount: 0,
+    stage8BossPenaltyLevel: 0,
+    stage8BossApproachLevel: 0,
+    stage8GameOver: false,
+    stage8ReportDate: '2월 15일',
+    stage8SettlementBalance: 2512380,
+    stage8Interest: 9510,
+    stage8TotalReturnAmount: 2525090,
     gameOverReason: null,
     gameOverRestartScene: null,
     savedPlayerPosition: null
@@ -199,6 +216,22 @@ export const GameState = {
                 return '회계사에게 정산보고서 검토를 의뢰하세요.';
             }
             return 'PIMS 단말기에서 두 보고서를 제출하세요.';
+        }
+
+        if (this.get('currentChapter') === 8) {
+            if (this.get('stage8PaymentCompleted')) {
+                return '정산금 반납을 완료했습니다.';
+            }
+            if (this.get('stage8ReturnNoticeReceived')) {
+                return '반납 게이트에서 정산금을 최종 반납하세요.';
+            }
+            if (!this.get('stage8ReturnDateSelected')) {
+                return '달력에서 반납예정일을 정하세요.';
+            }
+            if (!this.get('stage8AdditionalInterestChecked')) {
+                return '은행 전화기에서 추가반납이자를 확인하세요.';
+            }
+            return '공문 작성대에서 고지서 발급 요청 공문을 작성하세요.';
         }
 
         if (this.get('currentChapter') === 2) {

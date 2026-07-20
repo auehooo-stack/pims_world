@@ -309,6 +309,7 @@ export class TopHUD {
                 : chapter === 5 ? '5단계: 협약변경의 방'
                 : chapter === 6 ? '6단계: 성과의 제단'
                 : chapter === 7 ? '7단계: 보고서 마감실'
+                : chapter === 8 ? '8단계: 반납의 계곡'
                 : chapter === 3 ? '3단계: 중간 관람차'
                 : chapter === 2 ? '2단계: 집행의 집'
                 : '1단계: 봉인된 금고'

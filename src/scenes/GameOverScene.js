@@ -16,6 +16,11 @@ export class GameOverScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor(0x090714);
         const reason = GameState.get('gameOverReason');
         const restartScene = GameState.get('gameOverRestartScene');
+        const restartLabel = restartScene === 'Stage8Scene'
+            ? '8단계를 처음부터 다시 시작할 수 있습니다.'
+            : restartScene
+                ? '7단계를 처음부터 다시 시작할 수 있습니다.'
+                : '처음부터 다시 시작할 수 있습니다.';
 
         this.add.rectangle(CENTER_X, CENTER_Y, WIDTH, HEIGHT, 0x05050a, 0.92);
         this.add.rectangle(CENTER_X, CENTER_Y, WIDTH, HEIGHT, 0x2d1038, 0.10);
@@ -38,7 +43,7 @@ export class GameOverScene extends Phaser.Scene {
             wordWrap: { width: 860 }
         }).setOrigin(0.5);
 
-        this.add.text(CENTER_X, reason ? 330 : 292, restartScene ? '7단계를 처음부터 다시 시작할 수 있습니다.' : '처음부터 다시 시작할 수 있습니다.', {
+        this.add.text(CENTER_X, reason ? 330 : 292, restartLabel, {
             fontFamily: 'GALMURI, Arial, sans-serif',
             fontSize: '18px',
             color: '#c9ffef',
@@ -55,6 +60,9 @@ export class GameOverScene extends Phaser.Scene {
             if (restartScene === 'Stage7Scene') {
                 GameState.set('stage6GemCollected', true);
                 GameState.set('currentChapter', 7);
+            } else if (restartScene === 'Stage8Scene') {
+                GameState.set('stage7PimsSubmitted', true);
+                GameState.set('currentChapter', 8);
             }
             this.scene.start(restartScene || 'StartScene');
         });

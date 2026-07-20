@@ -10,7 +10,7 @@ import { ASSETS, hasTexture, playBgmWithFade } from '../systems/AssetManager.js'
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameDimensions.js';
 
 const STARTING_D_DAY = 28;
-const D_DAY_TICK_MS = 15000;
+const D_DAY_TICK_MS = 10000;
 const WALK_BOUNDS = { minX: 54, maxX: 1226, minY: 430, maxY: 510 };
 
 const WORLD_LAYOUT = {
@@ -35,6 +35,8 @@ export class Stage7Scene extends Phaser.Scene {
         this.timerText = null;
         this.deadlinePulse = null;
         this.transitionLocked = false;
+        this.stage8TransitionRequested = false;
+        this.onStage7CompletionDialogueClosed = null;
         this.reviewInProgress = false;
         this.hasBackground = false;
     }
@@ -300,7 +302,7 @@ export class Stage7Scene extends Phaser.Scene {
         }
         GameState.set('stage7EvidenceCollected', true);
         GameState.set('stage7FinalReportCreated', true);
-        this.playItemPop(WORLD_LAYOUT.evidence.x, WORLD_LAYOUT.evidence.y - 70, ASSETS.icons.performanceEvidence.key);
+        this.playItemPop(WORLD_LAYOUT.evidence.x, WORLD_LAYOUT.evidence.y - 70, ASSETS.icons.performanceEvidence.key, 42);
         this.playReportAssembly();
         this.bottomHud.refresh();
         this.dialogue.say([
@@ -370,10 +372,23 @@ export class Stage7Scene extends Phaser.Scene {
         this.transitionLocked = true;
         this.timerText.setText('제출 완료').setColor('#fff5c7');
         this.playSubmissionEffect();
+        this.onStage7CompletionDialogueClosed = () => this.transitionToStage8();
+        this.events.once('dialogbox:close', this.onStage7CompletionDialogueClosed);
         this.dialogue.say([
             { speaker: 'KCA 간사', text: '최종보고서와 정산보고서를 PIMS에 제출했습니다.' },
-            { speaker: 'KCA 간사', text: '2월 28일 기한 내 제출 완료!' }
-        ], () => this.showCompletionPanel());
+            { speaker: 'KCA 간사', text: '2월 28일 기한 내 제출 완료!' },
+            { speaker: 'KCA 간사', text: '보고서 제출까지 끝났군요.' },
+            { speaker: 'KCA 간사', text: '남은 건 정산금 반납뿐입니다. 반납하러 가시죠!' }
+        ], () => this.transitionToStage8());
+    }
+
+    transitionToStage8() {
+        if (this.stage8TransitionRequested) {
+            return;
+        }
+        this.stage8TransitionRequested = true;
+        GameState.set('currentChapter', 8);
+        this.time.delayedCall(30, () => this.scene.start('Stage8Scene'));
     }
 
     showAssistantHint() {
@@ -431,9 +446,9 @@ export class Stage7Scene extends Phaser.Scene {
         this.time.delayedCall(520, () => this.scene.start('GameOverScene'));
     }
 
-    playItemPop(x, y, textureKey) {
+    playItemPop(x, y, textureKey, displaySize = 42) {
         const node = hasTexture(this, textureKey)
-            ? this.add.image(x, y, textureKey).setDisplaySize(54, 54).setDepth(20)
+            ? this.add.image(x, y, textureKey).setDisplaySize(displaySize, displaySize).setDepth(20)
             : this.add.rectangle(x, y, 44, 54, 0xfff5c7, 1).setStrokeStyle(2, 0x8b60e8, 0.8).setDepth(20);
         this.tweens.add({
             targets: node,
@@ -450,10 +465,10 @@ export class Stage7Scene extends Phaser.Scene {
         const targetX = WORLD_LAYOUT.evidence.x + 90;
         const targetY = WORLD_LAYOUT.evidence.y - 78;
         const gem = hasTexture(this, ASSETS.effects.performanceGem.key)
-            ? this.add.image(targetX - 58, targetY, ASSETS.effects.performanceGem.key).setDisplaySize(44, 44).setDepth(20)
+            ? this.add.image(targetX - 58, targetY, ASSETS.effects.performanceGem.key).setDisplaySize(52, 52).setDepth(20)
             : this.add.circle(targetX - 58, targetY, 18, 0xffd36e, 1).setDepth(20);
         const evidence = hasTexture(this, ASSETS.icons.performanceEvidence.key)
-            ? this.add.image(targetX + 58, targetY, ASSETS.icons.performanceEvidence.key).setDisplaySize(44, 44).setDepth(20)
+            ? this.add.image(targetX + 58, targetY, ASSETS.icons.performanceEvidence.key).setDisplaySize(40, 40).setDepth(20)
             : this.add.rectangle(targetX + 58, targetY, 36, 44, 0xfff5c7, 1).setDepth(20);
         this.tweens.add({
             targets: [gem, evidence],
@@ -516,26 +531,10 @@ export class Stage7Scene extends Phaser.Scene {
         });
     }
 
-    showCompletionPanel() {
-        const overlay = this.add.container(0, 0).setDepth(1500);
-        const shade = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050611, 0.8);
-        const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 620, 230, 0x17132d, 0.97).setStrokeStyle(3, 0xffd36e, 0.8);
-        const title = this.add.text(GAME_WIDTH / 2, 315, '보고서 마감실 완료!', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '32px',
-            color: '#fff5c7'
-        }).setOrigin(0.5);
-        const body = this.add.text(GAME_WIDTH / 2, 380, '최종보고서와 정산보고서를\n2월 28일 기한 내 PIMS에 제출했습니다.', {
-            fontFamily: 'GALMURI, Arial, sans-serif',
-            fontSize: '18px',
-            color: '#c9ffef',
-            align: 'center',
-            lineSpacing: 8
-        }).setOrigin(0.5);
-        overlay.add([shade, panel, title, body]);
-    }
-
     cleanup() {
+        if (this.onStage7CompletionDialogueClosed) {
+            this.events.off('dialogbox:close', this.onStage7CompletionDialogueClosed);
+        }
         this.timerEvent?.remove(false);
         this.deadlinePulse?.stop?.();
         this.spaceKey?.off('down', this.onSpaceDown);

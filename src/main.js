@@ -11,6 +11,7 @@ import { InspectionGateScene } from './scenes/InspectionGateScene.js';
 import { TransformationRoomScene } from './scenes/TransformationRoomScene.js';
 import { Stage6Scene } from './scenes/Stage6Scene.js';
 import { Stage7Scene } from './scenes/Stage7Scene.js';
+import { Stage8Scene } from './scenes/Stage8Scene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { GAME_HEIGHT, GAME_WIDTH } from './config/gameDimensions.js';
 
@@ -50,6 +51,7 @@ const config = {
         TransformationRoomScene,
         Stage6Scene,
         Stage7Scene,
+        Stage8Scene,
         GameOverScene
     ]
 };
